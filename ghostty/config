@@ -1,0 +1,40 @@
+theme = Builtin Light
+
+cursor-style = block
+shell-integration-features = no-cursor
+macos-titlebar-style = transparent
+copy-on-select = clipboard
+
+font-family =  "Zed Plex Mono"
+font-size = 18
+keybind = shift+enter=text:\x1b\r
+
+# Treat the Option key as Alt to make terminal shortcuts easier.
+macos-option-as-alt = true
+
+##
+# Notifications
+# Bounce the dock icon and flag the terminal title when tmux sends BEL, and
+# allow applications to surface desktop notifications via OSC 9/777.
+bell-features = system,audio,attention,title
+desktop-notifications = true
+
+##
+# Disable shortcuts
+keybind = cmd+d=unbind
+keybind = cmd+shift+d=unbind
+keybind = cmd+shift+e=unbind
+
+keybind = cmd+t=unbind
+keybind = cmd+w=unbind
+keybind = cmd+shift+[=unbind
+keybind = cmd+shift+]=unbind
+
+# focus/movement
+keybind = cmd+option+left=unbind
+keybind = cmd+option+right=unbind
+keybind = cmd+option+up=unbind
+keybind = cmd+option+down=unbind
+
+env = PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+command = "$HOME/.config/tmux/start.sh"

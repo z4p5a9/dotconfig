@@ -1,0 +1,101 @@
+"ui.background" = {bg = "bg" }
+
+"ui.text" = {fg = "fg"}
+"ui.text.focus" = { bg = "cursor.line" }
+
+"ui.selection" = { bg = "highlight" }
+"ui.virtual.indent-guide" = { fg = "fg.subtle"}
+
+"ui.virtual.jump-label" = { fg = "fg", bg = "fg.subtle" }
+
+"ui.cursor" = { fg = "fg.inverted", bg = "cursor" }
+"ui.cursorline.primary" = { bg = "cursor.line" }
+"ui.cursor.match" = { underline = { color = "cursor.match", style = "double_line" } }
+"ui.cursor.primary.insert" = { fg = "fg.inverted", bg = "cursor.insert" }
+"ui.cursor.normal" = { fg = "fg.inverted", bg = "cursor.secondary" }
+"ui.cursor.insert" = { fg = "fg.inverted", bg = "cursor.secondary" }
+"ui.cursorline" = { bg = "cursor.secondary.line" }
+
+"ui.linenr" = {fg = "fg.subtle"}
+"ui.linenr.selected" = {fg = "fg.strong", modifiers = ["bold"]}
+
+"ui.picker.header.column.active" = { fg = "hue.strong", modifiers = ["bold"] }
+
+"ui.menu.selected" = { bg = "cursor.line" }
+
+"ui.bufferline" = { bg = "bg.subtle", fg = "fg" }
+"ui.bufferline.active" = { bg = "bg", fg = "fg" }
+"ui.bufferline.background" = { bg = "bg.subtle" }
+
+"ui.statusline" = { fg = "fg.inverted", bg = "hue.strong" }
+"ui.statusline.inactive" = { fg = "fg", bg = "bg.subtle" }
+
+"diagnostic.hint" = { underline = { color = "diagnostic.hint", style = "curl" } }
+"diagnostic.info" = { underline = { color = "diagnostic.hint", style = "curl" } }
+"diagnostic.warning" = { underline = { color = "diagnostic.warning", style = "curl" } }
+"diagnostic.error" = { underline = { color = "diagnostic.error", style = "curl" } }
+"diagnostic.unnecessary" = { modifiers = ["dim"] }
+"diagnostic.deprecated" = { modifiers = ["dim"] }
+"hint" = "diagnostic.hint"
+"info" = "diagnostic.hint"
+"warning" = "diagnostic.warning"
+"error" = "diagnostic.error"
+
+"diff.plus" = "diff.added"
+"diff.delta" = "diff.modified"
+"diff.minus" = "diff.removed"
+
+# Syntax highlighting
+string = { fg = "hue" }
+attribute = { fg = "fg" }
+type = { fg = "hue" }
+variable = { fg = "fg" }
+label= { fg = "fg" }
+keyword = { fg = "fg.strong", modifiers = ["bold"] }
+operator = { fg = "fg" }
+tag = { fg = "hue.strong" }
+jsx_element = { fg = "hue.strong" }
+comment = { fg = "fg.subtle", modifiers = ["italic"] }
+punctuation = { fg = "fg" }
+constructor = { fg = "hue.strong" }
+"constant.builtin" = { fg = "hue" }
+"constant.numeric" = { fg = "hue" }
+
+"markup.heading" = { fg = "fg", modifiers = ["bold"] }
+"markup.list" = "hue.strong"
+"markup.bold" = { modifiers = ["bold"] }
+"markup.italic" = { modifiers = ["italic"] }
+"markup.link.url" = { fg = "#4a90e2", modifiers = ["underlined"] }
+"markup.link.text" = "#4a90e2"
+"markup.raw.inline" = { fg = "hue" }
+"markup.quote" = { modifiers = ["italic"] }
+
+[palette]
+"bg" = "#ffffff"
+"bg.subtle" = "#ececec"
+
+"fg" = "#424242"
+"fg.strong" = "#000000"
+"fg.subtle" = "#b7b7b8"
+"fg.inverted" = "#ffffff"
+
+"visual" = "#ffe3de"
+"highlight" = "#ffd83d"
+
+"cursor" = "#ff2600"
+"cursor.insert" = "#424242"
+"cursor.line" = "#fff0ed"
+"cursor.secondary" = "#4a90e2"
+"cursor.secondary.line" = "#f2f7ff"
+"cursor.match" = "#4a90e2"
+
+"hue" = "#eb0000"
+"hue.strong" = "#8f0000"
+
+"diagnostic.hint" = "#2f80ed"
+"diagnostic.warning" = "#f89200"
+"diagnostic.error" = "#eb0000"
+
+"diff.added" = "#4caf50"
+"diff.modified" = "#2f80ed"
+"diff.removed" = "#eb0000"

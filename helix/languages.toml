@@ -1,0 +1,32 @@
+[[language]]
+name = "toml"
+# https://github.com/tamasfe/taplo/issues/580#issuecomment-2004174721
+roots = ["."]
+language-servers = ["taplo"]
+
+[[language]]
+name = "markdown"
+formatter = { command = 'prettierd', args = [".md"] }
+auto-format = true
+soft-wrap.enable = true
+
+[language-server.tailwindcss-ls]
+command = "tailwindcss-language-server"
+args = ["--stdio"]
+
+[[language]]
+name = "typescript"
+language-servers = ["typescript-language-server", "vscode-eslint-language-server", "tailwindcss-ls"]
+formatter = { command = "bunx", args = ["prettier"] }
+auto-format = true
+
+[[language]]
+name = "tsx"
+language-servers = ["typescript-language-server", "vscode-eslint-language-server", "tailwindcss-ls"]
+formatter = { command = "bunx", args = ["prettier", "--parser", "typescript"] }
+auto-format = true
+
+[[language]]
+name = "go"
+auto-format = true
+formatter = { command = "goimports" }
