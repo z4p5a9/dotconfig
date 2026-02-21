@@ -11,5 +11,11 @@ else
 fi
 
 if [[ -z "$TMUX" ]]; then
-  tmux new -A -s "$session"
+  if tmux has-session -t "$session" 2>/dev/null; then
+    tmux attach -t "$session"
+  elif tmux list-sessions >/dev/null 2>&1; then
+    tmux attach
+  else
+    tmux new -s "$session"
+  fi
 fi
