@@ -1,3 +1,11 @@
+local uv = vim.uv or vim.loop
+local global_ignore_file = vim.fs.joinpath(vim.env.HOME or "", ".ignore")
+local picker_ignore_args = { "--no-ignore-vcs" }
+
+if uv.fs_stat(global_ignore_file) then
+  vim.list_extend(picker_ignore_args, { "--ignore-file", global_ignore_file })
+end
+
 return {
   {
     "folke/snacks.nvim",
@@ -13,10 +21,12 @@ return {
       picker = {
         sources = {
           files = {
-            args = { "--no-ignore-vcs" }, -- ignore .gitignore, still respect .ignore
+            hidden = true,
+            args = picker_ignore_args,
           },
           grep = {
-            args = { "--no-ignore-vcs" },
+            hidden = true,
+            args = picker_ignore_args,
           },
         },
         main = {
