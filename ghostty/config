@@ -7,6 +7,8 @@ copy-on-select = clipboard
 
 font-family =  "Zed Plex Mono"
 font-size = 18
+
+keybind = alt+backspace=text:\x1b\x7f
 keybind = shift+enter=text:\x1b\r
 
 # Treat the Option key as Alt to make terminal shortcuts easier.

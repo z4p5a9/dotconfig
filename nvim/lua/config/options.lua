@@ -30,3 +30,6 @@ opt.backupdir = backupdir .. "//"
 
 -- Always show N number of lines before/after cursor
 opt.scrolloff = 10
+
+-- Disable rendering whitespace markers such as tab as `>`
+opt.list = false
