@@ -39,4 +39,4 @@ keybind = cmd+option+up=unbind
 keybind = cmd+option+down=unbind
 
 env = PATH=/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-command = "$HOME/.config/tmux/start.sh"
+# command = "$HOME/.config/tmux/start.sh"
