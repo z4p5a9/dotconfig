@@ -5,7 +5,7 @@ shell-integration-features = no-cursor
 macos-titlebar-style = transparent
 copy-on-select = clipboard
 
-font-family =  "Zed Plex Mono"
+font-family =  "Lilex"
 font-size = 18
 
 keybind = alt+backspace=text:\x1b\x7f
