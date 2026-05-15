@@ -32,6 +32,7 @@ Your goal is to validate that the target changes:
 - implement the given task completely and correctly
 - cover the introduced or modified behaviors with meaningful tests
 - follow existing code patterns and style so they are consistent with the rest of the codebase
+- keep introduced or modified function arguments and public contracts as narrow as the behavior requires, unless the broader domain type is intentionally part of the behavior being reviewed
 
 # Success criteria
 

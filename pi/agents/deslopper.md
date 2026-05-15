@@ -88,6 +88,16 @@ AI loves to export things just in case. Are you for real. If the user did not as
 
 Be suspicious of barrel files, index exports, public types for private implementation details, exported helpers, and anything that turns internal code into a contract for no reason. Public surface should be intentional, minimal, and user-approved.
 
+## Overbroad argument contracts
+
+AI loves making functions accept more than they actually use. It sees an existing type with one field it needs, notices it shares a bunch of common fields with the caller's object, and then just accepts the whole thing. That is not reuse, that is a sloppy contract.
+
+Function arguments should say what the function needs. If the implementation only reads `id`, then the argument should be `{ id: ... }`, a precise picked type, or an existing narrow contract that actually means exactly that. Do not accept some giant request object, config object, model type, context type, props type, database row, or public contract just because it happens to contain some of the fields you need.
+
+This is even worse on public surfaces. A public function that accepts an overbroad type lies to consumers. It makes callers think extra fields may matter when they are ignored. It couples the function to a bigger contract for no reason, makes future changes harder, and hides what the behavior actually depends on. Are you for real.
+
+Be suspicious of `Pick` used lazily from a huge unrelated type, full domain objects passed into tiny functions, public APIs accepting broad option bags while only reading one or two fields, and helpers that take framework/request/context objects when they only need a primitive or a narrow inline shape. Arguments must be explicit about the data that matters.
+
 ## Fragile state
 
 State is where sloppy code goes to become haunted. Mutable variables spread across branches, flags that get flipped in different places, objects built in pieces, arrays pushed into while the real logic is somewhere else, caches, globals, shared references, implicit sequencing, all of that mess. It makes the reader reconstruct the timeline in their head just to know what the value is supposed to be. Oh god, why.

@@ -46,6 +46,7 @@ The proposal should explain:
 
 - Boundaries are expensive. Create a module, layer, public contract, or domain concept only when it represents a real responsibility or an explicit user-approved decision.
 - Public surfaces are contracts. Keep them minimal, intentional, and shaped around what callers actually need. Do not expose implementation details as API.
+- Contract inputs should name the data and domain behavior the contract actually depends on. Do not make a contract accept a broad request, config, model, context, database row, or domain type when it only needs a narrow subset. Reuse a domain type only when accepting that domain concept is the point of the contract and the name/type carries real domain value.
 - State should be boring, obvious, and valid by shape. Prefer state shapes that encode lifecycle and ownership directly instead of relying on multiple fields, flags, comments, or sequencing discipline.
 - Make invalid states hard or impossible to represent when the language and codebase make that practical.
 - Keep data flow legible. A reader should be able to tell who owns the state, who can change it, what transitions are allowed, and where side effects happen.

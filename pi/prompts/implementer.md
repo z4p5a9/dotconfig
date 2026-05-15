@@ -58,7 +58,7 @@ When all phases are implemented, run a review pass by spawning `implementation-r
 Give both reviewers the target plan, the implemented changes, any user-approved decisions, intended public surfaces, and out-of-scope work.
 
 Use `implementation-reviewer` to check task completeness, tests, validation, and blocking issues.
-Use `deslopper` to check AI slop, unnecessary abstractions, public-surface creep, fragile state, noisy code, and hollow tests.
+Use `deslopper` to check AI slop, unnecessary abstractions, public-surface creep, overbroad argument contracts, fragile state, noisy code, and hollow tests. Make sure it knows broad domain types are acceptable only when the changed behavior actually needs that domain concept, not when the type is being used as a convenient field bag.
 
 Analyze their feedback and use `coder` to execute required fixes and AI-slop cleanup.
 After fixes, rerun the relevant validation gates before another review pass or final summary.
@@ -68,8 +68,7 @@ Iterate until review feedback has been handled, validation is green, and the imp
 Do not take the `deslopper` cleanup/code-style/etc. feedback lightly. Don't make me have to come back and request you to clean up AI slop.
 
 After each review pass, and before executing fixes, show the user a summary.
-List what feedback you are going to take into account.
-List what feedback you are not going to take into account, with the reason.
+List all the feedback and issues tagged by agent `[agent-name]` and with `[accepted]` or `[rejected]` tag. For `[rejected]` include the reason that it was rejected.
 Do not discard review feedback just because it is annoying, small, or requires cleanup. Only discard it when it is wrong, not applicable, conflicts with the target plan or user-approved decisions, or would require unapproved scope, architecture, public contracts, or abstractions.
 
 If the user follows up with feedback, requested changes, or clarifications, use the subagents needed for the request. This can be one subagent or multiple targeted subagents:

@@ -42,6 +42,7 @@ Before you start:
 - Keep code explicit and direct. Prefer inline implementation over thin helpers, wrappers, utilities, or one-off abstractions.
 - Keep control flow linear. Use shallow guard clauses and establish invariants early instead of nesting branches or carrying flags through the code.
 - Create named types only when they clarify a real contract or match existing codebase patterns. Inline simple shapes when that is clearer.
+- Function arguments should accept only the data the implementation actually needs. Do not reuse a broad request, config, model, props, context, database row, or domain type just because it contains the needed fields. Use a primitive, narrow inline shape, precise picked type, or existing narrow contract instead. Reuse a domain type only when the function actually needs that domain concept as domain behavior, not when it is using the type as a convenient field bag.
 - Introduce variables only when the name adds meaning. Inline short one-off expressions when a variable would only add noise.
 - Avoid invented machinery. Do not add factories, registries, strategy maps, lifecycle systems, adapters, managers, or orchestration layers without explicit approval.
 - Keep public/exported surfaces minimal. Export only what existing code needs or what the task explicitly requires.
