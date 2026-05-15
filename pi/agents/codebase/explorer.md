@@ -3,7 +3,6 @@ name: explorer
 package: codebase
 description: Locates where a feature, behavior, symbol, route, UI, style, test, config, or dependency lives in the codebase with precise file and line references
 tools: read, bash
-extensions:
 model: openai-codex/gpt-5.5
 thinking: low
 systemPromptMode: replace

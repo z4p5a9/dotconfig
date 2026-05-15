@@ -5,7 +5,7 @@ tools: read, bash, edit, write
 model: openai-codex/gpt-5.5
 thinking: low
 systemPromptMode: replace
-inheritProjectContext: false
+inheritProjectContext: true
 inheritSkills: false
 maxSubagentDepth: 1
 ---

@@ -1,13 +1,12 @@
 ---
 name: architect
 description: Proposes high-level architecture decisions for a concept, task, plan, code area, workflow, or system behavior
-tools: read, bash
+tools: read, bash, web_search, code_search, fetch_content, get_search_content
 model: openai-codex/gpt-5.5
 thinking: high
 systemPromptMode: replace
-inheritProjectContext: false
+inheritProjectContext: true
 inheritSkills: false
-skills: explore-codebase, explore-dependencies, explore-web
 maxSubagentDepth: 1
 ---
 
@@ -79,9 +78,8 @@ If the target is ambiguous in a way that changes the architecture, ask the orche
 
 Read the relevant context needed to understand the target.
 
-Use codebase research for existing patterns, ownership, contracts, state flow, wiring, failure behavior, and nearby implementations.
-Use dependency research when a dependency's design, API, version, or source behavior affects the architecture.
-Use web research when latest, up-to-date, and modern external practices, standards, APIs, or ecosystem behavior matter.
+Use local codebase research for existing patterns, ownership, contracts, state flow, wiring, failure behavior, and nearby implementations.
+Use web and code-search tools when dependency design, APIs, versions, source behavior, latest practices, standards, or ecosystem behavior affect the architecture.
 
 Do not research everything. Research enough to make the architecture decision with confidence.
 
