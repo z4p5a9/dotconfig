@@ -10,7 +10,7 @@ Before spawning it, give enough context so it knows what is approved versus what
 - what this code/change is trying to do
 - relevant plan/user-approved decisions
 - approved architecture/design choices
-- module or grid boundaries
+- module boundaries
 - intended public surfaces/contracts
 - what is explicitly out of scope
 
@@ -18,4 +18,4 @@ Only describe something as approved if it was explicitly stated by the user or i
 
 The goal is not to make `deslopper` polite. The goal is to aim it correctly so it attacks real AI slop instead of wasting time criticizing explicitly approved decisions.
 
-Use read-only/review-only by default unless the user explicitly asks for fixes.
+Use it for critique only. Do not ask `deslopper` to fix code.

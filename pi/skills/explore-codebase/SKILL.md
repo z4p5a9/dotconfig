@@ -1,10 +1,9 @@
 ---
-description: Use this whenever your need explore and locate a target in the current codebase
+description: Use this when you want to use the `codebase.explorer` agent to locate where a feature, behavior, symbol, route, UI, style, test, config, or dependency lives in the codebase.
 ---
 
-Spawn one or more `codebase.explorer` sub-agents, if you spawn more than one do it in parallel, in order to explore and locate files, implementations, functions, types, definitions, tests etc in the codebase you are working on. Each sub-agent should be given a targeted and specific request.
+Spawn one or more `codebase.explorer` sub-agents to locate codebase places with precise file and line references.
 
-Example requests:
+Use it for discovery, not critique, planning, or implementation. The agent is read-only and should return where things live, how they connect, and which files matter.
 
-- Find where and how `Inbox` service is consumed
-- Locate all `command` related database migrations
+Give each explorer a specific search target. If you need to explore separate targets, spawn explorers in parallel with one target each.
