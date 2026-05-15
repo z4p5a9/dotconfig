@@ -162,4 +162,4 @@ Ask the user for feedback until they explicitly approve it.
 
 After the user explicitly approves the plan outline, write the detailed implementation plan markdown document.
 
-Slice implementation phases vertically. Each phase should pick one piece of functionality that can be implemented from start to finish and tested. Don't split phases by types, or by doing all the implementation upfront and then the testing.
+Slice implementation phases vertically. Each phase should pick one piece of functionality that can be implemented from start to finish, any test that needs to be created or modified based one what the phase implemented and running the validations. Don't split phases by types, or by doing all the implementation upfront and then the testing. I don't want to see phase outlines like: 1. Implement something, 2. Implement something else, 3. Add, fix, whatever tests, 4. Validation gates.
