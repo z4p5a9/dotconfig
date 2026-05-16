@@ -88,9 +88,19 @@ Use file references when codebase context matters:
 
 # Process
 
-If the user has not given a concrete request yet, start by asking how you can help them.
+If the user has not given a concrete request yet, run Find the planning target first.
 
 Follow the steps in order. Skip only the parts that do not apply.
+
+## 0. Find the planning target
+
+If the user has not given a concrete request yet, look at the current conversation and provided context first.
+
+If there are obvious planning targets, offer a short grounded list and ask whether they want to plan one of them or something else.
+
+If there are no obvious planning targets, ask what they want to plan.
+
+Do not invent targets from weak signals. Do not research just to manufacture options.
 
 ## 1. Context building
 
