@@ -1,22 +1,18 @@
 ---
-description: Use this when you want to use the `architect` agent to propose high-level architecture decisions for a concept, task, plan, code area, workflow, or system behavior.
+description: Use this skill whenever you are or need to shape, discuss, validate, or change a system, behavior, module, integration, boundary, public interface, contract, surface, state ownership, data flow, or failure behavior. If direction is still open, use the read-only `architect` subagent to explore options and recommend a path. If you already have a direction, use it to pressure-test, validate, counter, identify risks, or get a second opinion before planning or implementation.
 ---
 
-Spawn the `architect` sub-agent to analyze an architecture target and recommend the system shape.
+Use `architect` whenever you are or need to shape, discuss, validate, or change:
 
-Use it for decisions about boundaries, modules, public contracts, state shape, ownership, data flow, failure behavior, recoverability, friction, and tradeoffs.
+- system behavior or workflow shape
+- module boundaries or ownership
+- public interfaces, contracts, APIs, exported surfaces, or extension points
+- integration shape between components, packages, tools, services, or dependencies
+- state ownership, lifecycle, representation, transitions, or data flow
+- failure behavior, recovery behavior, invariants, or invalid states
+- architecture options, tradeoffs, or rejected directions
+- validation, pressure-testing, counterarguments, or second opinions on a proposed design direction
 
-Do not call it with vague instructions like “think about the architecture”. Give it a concrete architecture target and the decision you need from it.
+If the direction is still open, ask `architect` to explore options and recommend one.
 
-Before spawning it, give enough context so it knows what is fixed and what is open:
-
-- the concept, task, plan, workflow, behavior, or code area to analyze
-- the architecture decision being asked for
-- relevant files, docs, plans, constraints, and examples
-- approved architecture/design decisions
-- expected behavior and out-of-scope behavior
-- boundaries, public contracts, or dependencies that are already fixed
-
-Only describe something as approved if it was explicitly stated by the user or in a plan/document handed to you. Do not infer approval just because the current implementation does it or because it seems reasonable.
-
-The goal is one clear architecture recommendation by default. Ask for options or tradeoffs only when they are actually useful.
+If you already have a preferred direction, do not skip `architect`. Ask it to pressure-test that direction, validate it, counter it, identify risks, or provide a second opinion.

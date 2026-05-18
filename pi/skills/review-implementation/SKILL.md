@@ -1,20 +1,30 @@
 ---
-description: Use this when you want to use the `implementation-reviewer` agent to review completed implementation changes against a given task.
+description: Use this skill whenever code changes have been made and you need to validate whether they correctly implement the task, plan phase, or vertical slice they were supposed to implement. Use the read-only `implementation-reviewer` subagent to run validation gates first, then review completeness, correctness, tests, and consistency with approved scope and existing patterns. It reports only blocking issues.
 ---
 
-Spawn the `implementation-reviewer` sub-agent to check whether completed changes correctly implement the task and report only blocking issues.
+Spawn one or more `implementation-reviewer` sub-agents whenever code changes have been made and you need to check whether they correctly implement the task.
 
-Use it after implementation work is done. Do not call it with vague instructions like “review this”.
+Use it after implementation work to review:
 
-Before spawning it, give enough context so it can review against the actual task instead of its own preferences:
+- whether the requested task, plan phase, or vertical slice is complete
+- whether the changed behavior is correct
+- whether the required tests were added or updated
+- whether the relevant validation gates pass
+- whether the implementation matches approved scope, decisions, and out-of-scope work
+- whether the changes follow existing patterns that matter for the task
+
+Give it:
 
 - the exact task, plan phase, or slice the changes were supposed to implement
-- the target changes to review, like a diff, branch, files, or implementation slice
-- relevant files, references, examples, and plan sections
+- the target changes to review, like a diff, branch, files, or implementation summary
+- expected behavior and undesired behavior
 - approved architecture/design decisions
-- expected behavior and out-of-scope behavior
+- out-of-scope work
+- relevant references, examples, and plan sections
 - validation commands or project gates when known
 
-Only describe something as approved if it was explicitly stated by the user or in a plan/document handed to you. Do not infer approval just because the current implementation does it or because it seems reasonable.
+Ask it to run validation first. If validation fails, it should stop and report the failed command and relevant output instead of continuing into code review.
 
-The goal is not a general code review. The goal is to verify task completion and surface blocking issues only.
+Use separate `implementation-reviewer` agents when you need separate review angles for different independent slices, validation areas, or parts of the task.
+
+The goal is not a general code review. The goal is to check whether the completed implementation satisfies the task and to report blocking issues only.

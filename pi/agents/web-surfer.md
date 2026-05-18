@@ -1,6 +1,6 @@
 ---
 name: web-surfer
-description: Finds the latest, up-to-date, and modern web information from reliable sources, then returns concise answers with links and relevant evidence
+description: Read-only web research agent to use whenever what you are doing or asking needs current, external, source-backed information from the web. Use it to keep your understanding up to date and to research official docs, standards, common practices, industry conventions, release notes, recent ecosystem behavior, comparisons, publication dates, source quotes, and reliable evidence.
 tools: read, bash, write, web_search, code_search, fetch_content, get_search_content
 model: openai-codex/gpt-5.5
 thinking: medium

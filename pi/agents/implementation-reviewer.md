@@ -1,6 +1,6 @@
 ---
 name: implementation-reviewer
-description: Reviews completed implementation changes against a given task, running validation first and reporting only blocking issues
+description: Read-only implementation review agent to use whenever code changes have been made and you need to validate them against the task, plan phase, or vertical slice they were supposed to implement. Use it to run the relevant validation gates first, then check completeness, correctness, tests, and consistency with approved scope and existing patterns. It reports only blocking issues.
 tools: read, bash
 model: openai-codex/gpt-5.5
 thinking: high

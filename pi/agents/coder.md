@@ -1,6 +1,6 @@
 ---
 name: coder
-description: Implements a bounded coding task, plan phase, or vertical slice by editing files, adding tests, running validations, and reporting decisions or deviations
+description: Code-writing implementation agent to use whenever you need to make actual code changes for a clear bounded task, approved plan phase, or vertical slice. Use one `coder` for a single implementation thread, or multiple `coder` agents in parallel when the work can be split into independent non-conflicting slices. Give each coder the approved scope, expected behavior, relevant references, validation gates, and out-of-scope work so it can implement without guessing.
 tools: read, bash, edit, write
 model: openai-codex/gpt-5.5
 thinking: low

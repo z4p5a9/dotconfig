@@ -1,6 +1,6 @@
 ---
 name: dep-diver
-description: Answers dependency, package, library, framework, tool, or external project questions by reading docs and source code, then writing documentation with concrete examples
+description: Read-only dependency exploration agent to use whenever the work or question involves a dependency, package, library, framework, tool, or external project. Use it before designing, planning, implementing, validating, reviewing, or finding usage patterns for code that depends on that dependency. It reads docs and source code to answer API, behavior, options, examples, internals, edge cases, version-specific details, and integration questions.
 tools: read, bash, web_search, code_search, fetch_content, get_search_content
 model: openai-codex/gpt-5.5
 thinking: medium

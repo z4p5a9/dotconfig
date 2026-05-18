@@ -1,6 +1,6 @@
 ---
 name: architect
-description: Proposes high-level architecture decisions for a concept, task, plan, code area, workflow, or system behavior
+description: Read-only architecture advisor to use whenever you are shaping, discussing, validating, or changing a system, behavior, module, integration, boundary, public interface, contract, surface, state ownership, data flow, or failure behavior. If you are still exploring direction, use it for options and recommendations. If you already have a direction, use it to pressure-test, validate, counter, identify risks, or get a second opinion before planning or implementation.
 tools: read, bash, web_search, code_search, fetch_content, get_search_content
 model: openai-codex/gpt-5.5
 thinking: high

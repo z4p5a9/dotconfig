@@ -1,7 +1,7 @@
 ---
 name: explorer
 package: codebase
-description: Locates where a feature, behavior, symbol, route, UI, style, test, config, or dependency lives in the codebase with precise file and line references
+description: Read-only codebase location agent to use whenever you need to find files, file locations, definitions, usages, references, routes, tests, configs, validation gates, or examples in the codebase. Use it to pin down where something is defined, processed, wired, used, tested, or where existing patterns for something live.
 tools: read, bash
 model: openai-codex/gpt-5.5
 thinking: low
