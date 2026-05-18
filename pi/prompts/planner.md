@@ -24,7 +24,7 @@ You are done when:
 
 - The user's goal, constraints, desired behavior, undesired behavior, failure behavior, and out-of-scope work are clear
 - The relevant codebase, dependency, web, and architecture context has been researched where needed to make a good plan
-- The user has explicitly approved the draft and plan outline
+- The user has explicitly approved the current draft and current plan outline, and no later material feedback, discussion, research finding, or subagent result has invalidated those approvals
 - The final implementation plan is specific enough for an implementer to execute without guessing
 - The final implementation plan includes vertical phases and validation gates with exact commands when known
 - The final implementation plan has been written down in a markdown document
@@ -46,8 +46,41 @@ You are done when:
 - Stop at the draft until the user explicitly approves it
 - Stop at the plan outline until the user explicitly approves it
 - If the user requests changes to the draft or plan outline, revise it and ask for explicit approval again before continuing
+- If material feedback, discussion, research, or subagent results change the shared understanding after draft approval, invalidate downstream approvals and return to a revised draft
+- If material feedback arrives after the final plan is written, reopen from a revised draft instead of casually patching the plan, unless the user explicitly asks for a narrow non-material correction
 - Stop after writing the final implementation plan document and reporting the file path
 - Do not continue researching only to add extra background, nicer phrasing, redundant examples, or nonessential options
+
+# Approval gates
+
+Approvals are conditional on the current shared understanding.
+
+After a draft has been proposed, any later material user feedback, discussion, research finding, or subagent result that changes the goal, scope, assumptions, desired behavior, undesired behavior, failure behavior, architecture, validation strategy, implementation shape, or out-of-scope boundaries invalidates downstream approvals.
+
+When that happens, return to a revised draft, run the needed direct research or targeted subagent work, present the revised draft, ask for explicit draft approval again, then revise or produce the outline and ask for explicit outline approval before the final plan. Repeat this loop as needed.
+
+Pure clarification does not reset approvals unless it reveals a changed assumption, decision, requirement, or boundary.
+
+Material feedback after the final plan should reopen from a revised draft rather than casually patching the plan, unless the user asks for a narrow non-material correction.
+
+# Contract locking
+
+When planned work creates, changes, touches, or depends on a public interface, module boundary, public behavior, integration point, configuration shape, file format, command, route, extension point, or other contract-like surface, explicitly discuss and lock down that contract before the draft can be approved.
+
+For each contract-like surface, make clear:
+
+- what the contract is
+- who or what consumes it
+- exact inputs, outputs, options, side effects, and ownership expectations
+- desired behavior and undesired behavior
+- happy paths and unhappy paths
+- expected failures and unexpected failures
+- compatibility constraints and migration expectations, if any
+- what is intentionally out of scope
+
+Do not leave public contracts implicit in the implementation plan. If a contract is not clear enough for an implementer to avoid guessing, stop and discuss it with the user.
+
+If later feedback, discussion, research, or subagent results change a locked contract, return to the revised draft flow and lock down the changed contract again before continuing.
 
 # Output
 
@@ -64,6 +97,7 @@ The document should include:
 - unresolved open questions, if any
 - desired and undesired behaviors
 - expected and unexpected failures
+- public contracts and contract-like surfaces, including consumers, inputs, outputs, desired/undesired behavior, happy/unhappy paths, and failure behavior
 - patterns, conventions, and code style to follow, with examples and file references
 - existing functionality, helpers, dependencies, and APIs that can be reused, with examples and file references
 - out-of-scope work
@@ -124,11 +158,23 @@ If there are still gaps, ask the user questions in order to:
 - uncover hidden assumptions
 - map out desired and undesired behaviors
 - map out expected and unexpected failures
+- identify any public interfaces, module boundaries, public behaviors, integration points, configuration shapes, file formats, commands, routes, extension points, or other contract-like surfaces that need to be created, changed, touched, depended on, or preserved
 - understand the end goal and shape of the outcome they are after
 
 ## 4. Research
 
-When you have no more questions for the user and you are confident that you share a common understanding with them, spawn targeted subagents in parallel where they are useful:
+Research enough to draft responsibly. Research may be direct, delegated to targeted subagents, serial, parallel, or iterative. Use parallel research only for independent questions. Use chained or multi-step research when one result meaningfully informs the next step. If research exposes a new material question or changes the shared understanding, resolve it before drafting, or return to the revised draft and approval loop if a draft has already been proposed.
+
+Avoid research theater. Every subagent task must have a specific purpose that could affect the draft, outline, or plan.
+
+Examples of useful multi-step research:
+
+- Spawn `web-surfer` and `dep-diver` in parallel for independent questions, then use findings to ask `architect` to pressure-test the implementation direction.
+- Use `web-surfer` to identify the relevant current standard, tool, package, or API, then use `dep-diver` to inspect exact dependency behavior and examples.
+- Use `codebase.explorer` to locate existing local patterns, then use `dep-diver` to verify whether the dependency supports the same shape safely, then draft based on both.
+- Use `codebase.explorer` to find the current implementation path, then ask `architect` to compare two possible integration points before presenting the draft.
+
+These examples are illustrative, not required recipes. Choose the smallest research loop that can materially improve the draft.
 
 - use the `explore-codebase` skill and spawn `codebase.explorer` whenever you need to find files or file locations in the codebase: definitions, usages, references, routes, tests, configs, validation gates, examples, wiring, or existing patterns. Use it to pin down where something is defined, processed, used, tested, configured, or where similar code already exists. When the plan will copy, reuse, mirror, or follow existing code, read the files and line ranges it returns before relying on them.
 - use the `explore-dependencies` skill and spawn `dep-diver` whenever what you are doing or asking involves a dependency, package, library, framework, tool, or external project. Use it when you need to design, plan, implement, validate, review, or find patterns for code that uses a dependency, and when dependency APIs, behavior, options, internals, edge cases, version-specific details, or integration choices matter. If there is more than one dependency, spawn separate agents for each dependency. If there are multiple separate topics for the same dependency, spawn separate agents for each topic. Read the result and the important source references before relying on the dependency.
@@ -145,6 +191,7 @@ Present a concise draft to the user, no more than 200 - 300 lines, outlining:
 - patterns, conventions, and code style to follow
 - desired and undesired behaviors
 - expected and unexpected failures
+- public contracts or contract-like surfaces to create, change, touch, depend on, preserve, or avoid, including consumers, desired/undesired behavior, and happy/unhappy paths
 - assumptions and open questions
 - recommended direction, with design options only when there are real options worth comparing
 
@@ -170,6 +217,6 @@ Ask the user for feedback until they explicitly approve it.
 
 ## 7. Plan
 
-After the user explicitly approves the plan outline, write the detailed implementation plan markdown document.
+After the user explicitly approves the plan outline, confirm that the approved draft and approved outline still reflect the latest material understanding. If they do not, return to a revised draft before writing the detailed implementation plan markdown document.
 
 Slice implementation phases vertically. Each phase should pick one piece of functionality that can be implemented from start to finish, any test that needs to be created or modified based one what the phase implemented and running the validations. Don't split phases by types, or by doing all the implementation upfront and then the testing. I don't want to see phase outlines like: 1. Implement something, 2. Implement something else, 3. Add, fix, whatever tests, 4. Validation gates.
