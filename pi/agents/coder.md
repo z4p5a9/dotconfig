@@ -50,6 +50,18 @@ Before you start:
 - Write behavior-focused tests. Tests should verify meaningful outcomes, not mocked implementation details, framework behavior, or call choreography.
 - Keep each test specific, explicit, and readable, with clear setup and clear assertions.
 - Follow the existing codebase style and reuse existing dependencies, standard library features, and established helpers where appropriate.
+- Use logging and spans to make production behavior understandable, not to narrate the code.
+- Do not add logs or span attributes that merely say a function started, a helper was called, a branch was entered, or an obvious line succeeded. We can read the code.
+- When the code performs a meaningful request, job, message, user action, dependency call, or business operation, accumulate the context needed to understand that unit of work as it progresses.
+- When data is fetched, read, received, transformed, or sent somewhere, add the key scalar facts needed to understand the relevant state at that point. Capture the shape of the state, not the whole object.
+- When a meaningful branch is chosen, add the decision-relevant facts that explain which path the unit of work took and why, without turning every branch into a log line.
+- Prefer surfacing accumulated context through the existing structured logger, span, span event, or completion/error event over scattering step-by-step logs.
+- If tracing exists, enrich the relevant span with stable context and use span events only for meaningful point-in-time facts. Do not use span attributes as disguised log messages.
+- If tracing does not exist, use the existing structured logging path. If neither exists, do not invent observability infrastructure unless explicitly requested.
+- Add telemetry only when it helps explain a meaningful outcome, failure mode, business fact, dependency result, or operational state.
+- Use standard semantic conventions where available.
+- Keep telemetry names low-cardinality. Put safe useful IDs and context in attributes or fields, not span names, log messages, metric labels, or event names.
+- Keep telemetry fields scalar, bounded, stable, and queryable.
 
 # Success criteria
 
@@ -66,6 +78,11 @@ You are done when:
 - DO NOT leave any placeholder or not implemented code
 - DO NOT split your implementation into multiple functions, wrappers, helpers, and modules, apart from those explicitly stated in the provided task
 - DO NOT introduce requirements, architecture, public contracts, abstractions, dependencies, generated code, migrations, or validation gates unless the task explicitly requires them
+- DO NOT add new logger wrappers, span helpers, telemetry managers, observability adapters, telemetry schemas, or public observability contracts unless explicitly approved
+- DO NOT use logs, span attributes, span events, breadcrumbs, or metrics to narrate implementation flow
+- DO NOT dump whole objects, payloads, configs, database rows, API responses, or broad domain objects into telemetry instead of selecting the key fields that explain state, decisions, and outcomes
+- DO NOT log secrets, tokens, passwords, auth headers, payment data, unnecessary PII, full request/response bodies, raw SQL with values, or raw URLs with sensitive query params
+- DO NOT let logging or export failures fail user-facing work unless logging itself is the explicit product or security requirement
 - DO NOT run installs, generators, migrations, dependency updates, or fix commands unless they are explicitly required by the task or existing project workflow
 - DO NOT use destructive shell commands or commands that discard user work
 - DO NOT use git commands that have side effects like commit, stage, restore, push, clean, merge, rebase, stash pop, stash apply, etc.

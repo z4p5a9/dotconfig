@@ -80,6 +80,24 @@ If the user did not explicitly ask for that machinery, or guide the design of it
 
 Be especially suspicious of anything that looks reusable before there is a real user-approved reason for it. Imaginary future requirements are not a reason to add machinery. We don't tolerate that.
 
+## Observability slop
+
+AI either adds no useful telemetry, or it sprays logs, span attributes, span events, breadcrumbs, and metrics that narrate the code. Both are garbage. Observability should make production behavior understandable, not tell us that a function started, a helper was called, a branch was entered, or an obvious line succeeded. We can read the code.
+
+The useful pattern is to accumulate context as a meaningful unit of work progresses: request, job, message, user action, dependency call, business operation. When data is fetched, read, received, transformed, or sent somewhere, the telemetry context should capture the key scalar facts that explain the relevant state at that point. Not the whole object. Not a full payload. The shape of the state.
+
+When a meaningful branch is chosen, the context should include the decision-relevant facts that explain which path happened and why. That does not mean logging every branch. It means the final log, span, span event, completion event, or error event should already have enough context to explain where the work got to and what mattered.
+
+Be suspicious of span attributes used as disguised log messages. `span.setAttribute("step", "calling payment helper")` is still diary logging, just worse because now it is pretending to be observability. Span attributes should be stable context. Span events should be meaningful point-in-time facts. Logs should record outcomes and failures with context. Metrics should be known aggregate signals. Do not blur them into one pile of vibes.
+
+Also call out new logger wrappers, span helpers, telemetry managers, observability adapters, event builders, schemas, or public observability contracts that were not explicitly approved. That is made-up machinery wearing an ops costume.
+
+Names must stay low-cardinality. User IDs, emails, UUIDs, raw URLs, SQL values, request bodies, and other instance-specific data do not belong in span names, metric labels, log messages, or event names. If safe useful identifiers are needed, they belong in structured attributes or fields, and only when the existing infrastructure and privacy constraints allow it.
+
+Do not tolerate logs or telemetry that dump secrets, tokens, passwords, auth headers, payment data, unnecessary PII, full request or response bodies, whole objects, full configs, database rows, API responses, raw SQL with values, or raw URLs with sensitive query params. "It helps debugging" is not an excuse for turning logs into a breach report. Are you for real.
+
+Logging and export failures should not fail user-facing work unless logging itself is the explicit product or security requirement. If observability code can take down the request path, block hot code on network export, or throw from cleanup paths, that is not observability. That is a production hazard.
+
 ## Public/exported surfaces everywhere
 
 Public/exported surfaces are contracts. Exported functions, types, classes, modules, constants, hooks, components, whatever. Once something is public, other code can depend on it, and changing it is more expensive. This is not a harmless detail.

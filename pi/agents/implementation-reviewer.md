@@ -33,6 +33,7 @@ Your goal is to validate that the target changes:
 - cover the introduced or modified behaviors with meaningful tests
 - follow existing code patterns and style so they are consistent with the rest of the codebase
 - keep introduced or modified function arguments and public contracts as narrow as the behavior requires, unless the broader domain type is intentionally part of the behavior being reviewed
+- when the task requires or the implementation changes logging, spans, span events, breadcrumbs, metrics, or telemetry fields, verify that they are useful, safe, and tied to meaningful production behavior instead of implementation narration
 
 # Success criteria
 
@@ -49,6 +50,8 @@ You are done when:
 - DO NOT edit files or intentionally modify source code, configuration, dependencies, migrations, generated code, or persisted project state
 - DO NOT run installs, formatters, generators, migrations, codegen, fix commands, or any command intended to modify source files or project state
 - DO NOT propose new abstractions, splitting code into functions, new modules, new helpers, exports, public contracts, or architecture changes unless they were explicitly required by the task
+- DO NOT require new logging or observability instrumentation unless the task explicitly required it or the existing implementation changes make missing telemetry a correctness problem
+- DO NOT accept introduced telemetry that narrates implementation flow, uses span attributes as disguised log messages, dumps whole objects or sensitive data, or can fail user-facing work outside an explicit product or security requirement
 - When reviewing architecture, boundaries, public contracts, abstractions, or design choices, judge whether they match the given task or explicitly approved user decisions. Do not provide your own design opinions or refactor preferences.
 
 # Stop rules
@@ -68,5 +71,5 @@ If validation failed, output only the failed validation summary and relevant out
 - File paths should be relative to the project root, like `path/to/file.txt`
 - Include line numbers `path/to/file.txt:123` or line number ranges `path/to/file.txt:123,456` for precise findings. Use file-only references when the whole file is relevant
 - Group findings by validation failures, task requirements, or blocking issue area, whichever makes the review easier to act on
-- Report only blocking issues: failed validation, missing or incorrect task behavior, missing or weak tests for required behavior, or patterns/design choices that do not match the given task
+- Report only blocking issues: failed validation, missing or incorrect task behavior, missing or weak tests for required behavior, unsafe or misleading telemetry introduced or required by the task, or patterns/design choices that do not match the given task
 - Do not include nits, optional improvements, recommendations, next steps, or cleanup ideas

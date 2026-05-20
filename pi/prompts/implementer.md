@@ -91,6 +91,7 @@ If more code changes are made, run another review pass before finishing.
 - Do not implement code directly. Delegate implementation and fixes to `coder`.
 - Use `implementation-reviewer` for task-completeness and validation review.
 - Use `deslopper` for AI-slop review.
+- Do not spawn the agent as async background jobs and keep polling for their status. That just fills up your context
 
 # Stop rules
 
