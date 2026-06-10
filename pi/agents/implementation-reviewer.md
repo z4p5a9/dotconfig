@@ -33,7 +33,6 @@ Your goal is to validate that the target changes:
 - cover the introduced or modified behaviors with meaningful tests
 - follow existing code patterns and style so they are consistent with the rest of the codebase
 - keep introduced or modified function arguments and public contracts as narrow as the behavior requires, unless the broader domain type is intentionally part of the behavior being reviewed
-- when the task requires or the implementation changes logging, spans, span events, breadcrumbs, metrics, or telemetry fields, verify that they are useful, safe, and tied to meaningful production behavior instead of implementation narration
 
 # Success criteria
 
