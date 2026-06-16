@@ -15,7 +15,10 @@ type DelegateDetails = {
 	endedAt: number;
 	durationMs: number;
 	exitCode: number;
-	stdoutEvents: unknown[];
+	trace: {
+		stdoutBytes: number;
+		stdoutEventCounts: Record<string, number>;
+	};
 	stderr: string;
 	finalOutput: string;
 	returnedOutput: string;
@@ -131,7 +134,10 @@ function narniaExtension(pi: ExtensionAPI): void {
 			): Promise<{ content: [{ type: "text"; text: string }]; details: DelegateDetails }> {
 				const startedAt = Date.now();
 				const task = params.task.trim();
-				const stdoutEvents: unknown[] = [];
+				// Do not persist raw child JSON events here. They include streaming message_update payloads and can make parent sessions hundreds of MB.
+				// If full child traces are needed later, write them to an opt-in external trace file with retention, not session details.
+				const stdoutEventCounts: Record<string, number> = {};
+				let stdoutBytes = 0;
 				let stderr = "";
 				let finalOutput = "";
 				const filesRead: string[] = [];
@@ -165,7 +171,10 @@ function narniaExtension(pi: ExtensionAPI): void {
 					endedAt,
 					durationMs: endedAt - startedAt,
 					exitCode,
-					stdoutEvents,
+					trace: {
+						stdoutBytes,
+						stdoutEventCounts: { ...stdoutEventCounts },
+					},
 					stderr,
 					finalOutput: currentFinalOutput,
 					returnedOutput,
@@ -270,7 +279,9 @@ function narniaExtension(pi: ExtensionAPI): void {
 								return;
 							}
 
-							stdoutEvents.push(event);
+							stdoutBytes += Buffer.byteLength(line, "utf8") + 1;
+							const eventType = typeof (event as { type?: unknown }).type === "string" ? (event as { type: string }).type : "unknown";
+							stdoutEventCounts[eventType] = (stdoutEventCounts[eventType] ?? 0) + 1;
 							const typedEvent = event as {
 								type?: unknown;
 								message?: {
