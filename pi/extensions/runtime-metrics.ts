@@ -3,7 +3,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 const CUSTOM_TYPE = "runtime-metrics";
 
 type UsageSnapshot = {
-	tokens: number;
+	contextTokens: number | null;
 	cost: number;
 };
 
@@ -12,7 +12,8 @@ type RuntimeRunEntry = {
 	startedAt: number;
 	endedAt: number;
 	durationMs: number;
-	tokenDelta: number;
+	contextDelta?: number | null;
+	tokenDelta?: number;
 	costDelta: number;
 };
 
@@ -47,28 +48,22 @@ function formatCost(cost: number, isSubscription: boolean): string {
 	return `$${amount.toFixed(3)}${isSubscription ? " (sub)" : ""}`;
 }
 
-function buildSummary(durationMs: number, tokenDelta: number, costDelta: number, isSubscription: boolean): string {
-	return `done ${formatDuration(durationMs)} · ${formatTokens(tokenDelta)} tok · ${formatCost(costDelta, isSubscription)}`;
+function buildSummary(durationMs: number, contextDelta: number | null, costDelta: number, isSubscription: boolean): string {
+	const context = contextDelta === null ? "?" : `+${formatTokens(contextDelta)}`;
+	return `done ${formatDuration(durationMs)} · ${context} ctx · ${formatCost(costDelta, isSubscription)}`;
 }
 
 function getUsageSnapshot(ctx: ExtensionContext): UsageSnapshot {
-	let tokens = 0;
 	let cost = 0;
 
 	for (const entry of ctx.sessionManager.getBranch()) {
 		if (entry.type === "message" && entry.message.role === "assistant") {
 			const usage = entry.message.usage;
-
-			tokens +=
-				(Number.isFinite(usage?.input) ? usage.input : 0) +
-				(Number.isFinite(usage?.output) ? usage.output : 0) +
-				(Number.isFinite(usage?.cacheRead) ? usage.cacheRead : 0) +
-				(Number.isFinite(usage?.cacheWrite) ? usage.cacheWrite : 0);
 			cost += Number.isFinite(usage?.cost?.total) ? usage.cost.total : 0;
 		}
 	}
 
-	return { tokens, cost };
+	return { contextTokens: ctx.getContextUsage()?.tokens ?? null, cost };
 }
 
 function isRuntimeEntry(entry: unknown): entry is RuntimeRunEntry {
@@ -83,8 +78,9 @@ function isRuntimeEntry(entry: unknown): entry is RuntimeRunEntry {
 		Number.isFinite(data.endedAt) &&
 		typeof data.durationMs === "number" &&
 		Number.isFinite(data.durationMs) &&
-		typeof data.tokenDelta === "number" &&
-		Number.isFinite(data.tokenDelta) &&
+		(data.contextDelta === undefined || data.contextDelta === null ||
+			(typeof data.contextDelta === "number" && Number.isFinite(data.contextDelta))) &&
+		(data.tokenDelta === undefined || (typeof data.tokenDelta === "number" && Number.isFinite(data.tokenDelta))) &&
 		typeof data.costDelta === "number" &&
 		Number.isFinite(data.costDelta)
 	);
@@ -250,14 +246,17 @@ export default function (pi: ExtensionAPI) {
 				const endedAt = Date.now();
 				const durationMs = Math.max(0, endedAt - run.startedAt);
 				const finalUsage = getUsageSnapshot(ctx);
-				const tokenDelta = Math.max(0, finalUsage.tokens - run.baseline.tokens);
+				const contextDelta =
+					run.baseline.contextTokens === null || finalUsage.contextTokens === null
+						? null
+						: Math.max(0, finalUsage.contextTokens - run.baseline.contextTokens);
 				const costDelta = Math.max(0, finalUsage.cost - run.baseline.cost);
 				const runEntry: RuntimeRunEntry = {
 					kind: "run",
 					startedAt: run.startedAt,
 					endedAt,
 					durationMs,
-					tokenDelta,
+					contextDelta,
 					costDelta,
 				};
 
@@ -273,7 +272,7 @@ export default function (pi: ExtensionAPI) {
 				updateStatus(ctx);
 
 				const isSubscription = ctx.model ? ctx.modelRegistry.isUsingOAuth(ctx.model) : false;
-				const summary = buildSummary(durationMs, tokenDelta, costDelta, isSubscription);
+				const summary = buildSummary(durationMs, contextDelta, costDelta, isSubscription);
 				ctx.ui.notify(summary, "info");
 			} finally {
 				activeRun = undefined;
