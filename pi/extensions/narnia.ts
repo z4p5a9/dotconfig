@@ -60,7 +60,7 @@ type DelegateDetails = Omit<DelegateChildDetails, "index" | "title" | "content" 
 };
 
 const CUSTOM_TYPE = "narnia";
-const BLOCK_REASON = "Narnia Mode: root session cannot call tools directly. Use delegate with tasks: { title: string; content: string }[].";
+const BLOCK_REASON = "Narnia Mode: root session cannot call tools directly. Use one delegate call with tasks: { title: string; content: string }[]; batch currently-known independent work into multiple titled tasks.";
 const RETURNED_OUTPUT_CAP_BYTES = 12 * 1024;
 const CHILD_REQUIRED_SECTIONS = [
 	"## Result",
@@ -93,7 +93,7 @@ Short outcome.
 
 ## Needs Parent/User
 - question / none`;
-const NARNIA_ROOT_PROMPT = "Narnia mode is enabled. Root session is a delegate-only orchestrator. Use only delegate for file, shell, web, edit, and test work. Delegate as many independent tasks in parallel as needed. Always look for work that can be parallelized before delegating. Delegate bounded tasks with enough context. Keep root context compact. Do not ask child agents to recursively delegate.";
+const NARNIA_ROOT_PROMPT = "Narnia mode is enabled. Root session is a delegate-only orchestrator. Use only delegate for file, shell, web, edit, and test work. Use one delegate call containing multiple titled tasks for all currently-known independent work. Do not make multiple delegate calls in the same turn unless later work depends on earlier delegate results. Always look for work that can be parallelized before delegating. Each task object needs a concise title and full content. Delegate bounded tasks with enough context. Keep root context compact. Do not ask child agents to recursively delegate.";
 
 function formatTokens(count: number): string {
 	const tokens = Math.max(0, Number.isFinite(count) ? count : 0);
@@ -133,10 +133,12 @@ function narniaExtension(pi: ExtensionAPI): void {
 		pi.registerTool({
 			name: "delegate",
 			label: "Delegate",
-			description: "Delegate bounded tasks to isolated child Pi processes. Input is tasks: { title: string; content: string }[].",
+			description: "Delegate bounded tasks to isolated child Pi processes. Batch currently-known independent work into one call with multiple tasks: { title: string; content: string }[].",
 			promptSnippet: "Run bounded titled file, shell, web, edit, and test work outside the root session.",
 			promptGuidelines: [
-				"Use delegate with tasks: [{ title, content }] for bounded titled file, shell, web, edit, and test work while Narnia mode is enabled.",
+				"Use one delegate call with tasks: [{ title, content }] for all currently-known independent file, shell, web, edit, and test work while Narnia mode is enabled.",
+				"Do not make multiple delegate calls in the same turn unless later work depends on earlier delegate results.",
+				"Each task object must have a concise title and full task content.",
 				"Do not ask delegate to recursively delegate.",
 			],
 			parameters: Type.Object(
@@ -156,7 +158,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 							{ additionalProperties: false },
 						),
 						{
-							description: "Required. Array of { title: string; content: string } task objects. Titles must be 1-4 words. Content must be non-empty.",
+							description: "Required. Array of { title: string; content: string } task objects. Batch currently-known independent work into one call. Titles must be concise, 1-4 words. Content must be complete and non-empty.",
 							minItems: 1,
 						},
 					),
@@ -171,7 +173,6 @@ function narniaExtension(pi: ExtensionAPI): void {
 				ctx,
 			): Promise<{ content: [{ type: "text"; text: string }]; details: DelegateDetails }> {
 				const startedAt = Date.now();
-				const paramsObject = params && typeof params === "object" ? (params as Record<string, unknown>) : {};
 				const makeRejectedDetails = (returnedOutput: string): DelegateDetails => {
 					const endedAt = Date.now();
 					return {
@@ -206,6 +207,16 @@ function narniaExtension(pi: ExtensionAPI): void {
 						},
 					};
 				};
+
+				if (activeDelegateCalls > 0) {
+					const returnedOutput = "Delegate already has an active call. Combine all currently-known independent work into one delegate call with multiple titled tasks, or wait for prior delegate results before making dependent follow-up calls.";
+					return {
+						content: [{ type: "text", text: returnedOutput }],
+						details: makeRejectedDetails(returnedOutput),
+					};
+				}
+
+				const paramsObject = params && typeof params === "object" ? (params as Record<string, unknown>) : {};
 
 				if ("task" in paramsObject) {
 					const returnedOutput = "Delegate accepts only tasks: { title: string; content: string }[]. Use delegate({ tasks: [{ title, content }] }).";
