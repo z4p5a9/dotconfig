@@ -11,9 +11,15 @@ type NarniaState = {
 
 type DelegateChildStatus = "running" | "completed" | "failed";
 
+type DelegateTask = {
+	title: string;
+	content: string;
+};
+
 type DelegateChildDetails = {
 	index: number;
-	task: string;
+	title: string;
+	content: string;
 	status: DelegateChildStatus;
 	startedAt: number;
 	endedAt: number;
@@ -48,13 +54,13 @@ type DelegateChildDetails = {
 	};
 };
 
-type DelegateDetails = Omit<DelegateChildDetails, "index" | "task" | "status"> & {
-	tasks: string[];
+type DelegateDetails = Omit<DelegateChildDetails, "index" | "title" | "content" | "status"> & {
+	tasks: DelegateTask[];
 	children: DelegateChildDetails[];
 };
 
 const CUSTOM_TYPE = "narnia";
-const BLOCK_REASON = "Narnia Mode: root session cannot call tools directly. Use delegate with tasks: string[].";
+const BLOCK_REASON = "Narnia Mode: root session cannot call tools directly. Use delegate with tasks: { title: string; content: string }[].";
 const RETURNED_OUTPUT_CAP_BYTES = 12 * 1024;
 const CHILD_REQUIRED_SECTIONS = [
 	"## Result",
@@ -127,17 +133,33 @@ function narniaExtension(pi: ExtensionAPI): void {
 		pi.registerTool({
 			name: "delegate",
 			label: "Delegate",
-			description: "Delegate bounded tasks to isolated child Pi processes.",
-			promptSnippet: "Run bounded file, shell, web, edit, and test work outside the root session.",
+			description: "Delegate bounded tasks to isolated child Pi processes. Input is tasks: { title: string; content: string }[].",
+			promptSnippet: "Run bounded titled file, shell, web, edit, and test work outside the root session.",
 			promptGuidelines: [
-				"Use delegate for bounded file, shell, web, edit, and test work while Narnia mode is enabled.",
+				"Use delegate with tasks: [{ title, content }] for bounded titled file, shell, web, edit, and test work while Narnia mode is enabled.",
 				"Do not ask delegate to recursively delegate.",
 			],
 			parameters: Type.Object(
 				{
-					tasks: Type.Array(Type.String({ description: "Bounded task for a child Pi process." }), {
-						description: "Bounded tasks for child Pi processes.",
-					}),
+					tasks: Type.Array(
+						Type.Object(
+							{
+								title: Type.String({
+									description: "Required. 1-4 word task title.",
+									minLength: 1,
+								}),
+								content: Type.String({
+									description: "Required. Non-empty task content.",
+									minLength: 1,
+								}),
+							},
+							{ additionalProperties: false },
+						),
+						{
+							description: "Required. Array of { title: string; content: string } task objects. Titles must be 1-4 words. Content must be non-empty.",
+							minItems: 1,
+						},
+					),
 				},
 				{ additionalProperties: false },
 			),
@@ -150,11 +172,10 @@ function narniaExtension(pi: ExtensionAPI): void {
 			): Promise<{ content: [{ type: "text"; text: string }]; details: DelegateDetails }> {
 				const startedAt = Date.now();
 				const paramsObject = params && typeof params === "object" ? (params as Record<string, unknown>) : {};
-				const makeRejectedDetails = (returnedOutput: string, tasks: string[] = []): DelegateDetails => {
+				const makeRejectedDetails = (returnedOutput: string): DelegateDetails => {
 					const endedAt = Date.now();
-					const lines = returnedOutput.split(/\r?\n/).map((line) => line.trim());
 					return {
-						tasks,
+						tasks: [],
 						children: [],
 						startedAt,
 						endedAt,
@@ -167,7 +188,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 						stderr: "",
 						finalOutput: returnedOutput,
 						returnedOutput,
-						contractMissingSections: CHILD_REQUIRED_SECTIONS.filter((section) => !lines.includes(section)),
+						contractMissingSections: [],
 						metadata: {
 							filesRead: [],
 							filesModified: [],
@@ -187,7 +208,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 				};
 
 				if ("task" in paramsObject) {
-					const returnedOutput = "Delegate accepts only tasks: string[]. Use delegate({ tasks: [...] }).";
+					const returnedOutput = "Delegate accepts only tasks: { title: string; content: string }[]. Use delegate({ tasks: [{ title, content }] }).";
 					return {
 						content: [{ type: "text", text: returnedOutput }],
 						details: makeRejectedDetails(returnedOutput),
@@ -218,32 +239,50 @@ function narniaExtension(pi: ExtensionAPI): void {
 					};
 				}
 
-				const tasks: string[] = [];
+				const tasks: DelegateTask[] = [];
 				for (let index = 0; index < paramsObject.tasks.length; index++) {
 					const rawTask = paramsObject.tasks[index];
-					if (typeof rawTask !== "string") {
-						const returnedOutput = `Delegate task ${index + 1} must be a string.`;
+					if (!rawTask || typeof rawTask !== "object" || Array.isArray(rawTask)) {
+						const returnedOutput = `Delegate task ${index + 1} must be an object with title and content.`;
 						return {
 							content: [{ type: "text", text: returnedOutput }],
-							details: makeRejectedDetails(returnedOutput, tasks),
+							details: makeRejectedDetails(returnedOutput),
 						};
 					}
-					const task = rawTask.trim();
-					if (!task) {
-						const returnedOutput = `Delegate task ${index + 1} is empty.`;
+					const rawTaskObject = rawTask as { title?: unknown; content?: unknown };
+					if (typeof rawTaskObject.title !== "string" || typeof rawTaskObject.content !== "string") {
+						const returnedOutput = `Delegate task ${index + 1} must be an object with title and content.`;
 						return {
 							content: [{ type: "text", text: returnedOutput }],
-							details: makeRejectedDetails(returnedOutput, tasks),
+							details: makeRejectedDetails(returnedOutput),
 						};
 					}
-					tasks.push(task);
+					const title = rawTaskObject.title.trim().replace(/\s+/g, " ");
+					const titleWordCount = title ? title.split(" ").length : 0;
+					if (titleWordCount < 1 || titleWordCount > 4) {
+						const returnedOutput = `Delegate task ${index + 1} title must be 1-4 words.`;
+						return {
+							content: [{ type: "text", text: returnedOutput }],
+							details: makeRejectedDetails(returnedOutput),
+						};
+					}
+					const content = rawTaskObject.content.trim();
+					if (!content) {
+						const returnedOutput = `Delegate task ${index + 1} content is empty.`;
+						return {
+							content: [{ type: "text", text: returnedOutput }],
+							details: makeRejectedDetails(returnedOutput),
+						};
+					}
+					tasks.push({ title, content });
 				}
 
 				// Do not persist raw child JSON events here. They include streaming message_update payloads and can make parent sessions hundreds of MB.
 				// If full child traces are needed later, write them to an opt-in external trace file with retention, not session details.
 				const children: DelegateChildDetails[] = tasks.map((task, index) => ({
 					index,
-					task,
+					title: task.title,
+					content: task.content,
 					status: "running",
 					startedAt,
 					endedAt: startedAt,
@@ -307,7 +346,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 				const buildAggregateReturnedOutput = (): string => {
 					let returnedOutput = `${children.filter(childSucceeded).length}/${children.length} tasks succeeded.`;
 					for (const child of children) {
-						returnedOutput += `\n\n## Task ${child.index + 1}\n\n${child.returnedOutput || "Delegate child running..."}`;
+						returnedOutput += `\n\n## ${child.title}\n\n${child.returnedOutput || "Delegate child running..."}`;
 					}
 					return capReturnedOutput(returnedOutput);
 				};
@@ -316,7 +355,8 @@ function narniaExtension(pi: ExtensionAPI): void {
 					const childEndedAt = child.exitCode === -1 ? endedAt : child.endedAt;
 					return {
 						index: child.index,
-						task: child.task,
+						title: child.title,
+						content: child.content,
 						status: child.status,
 						startedAt: child.startedAt,
 						endedAt: childEndedAt,
@@ -382,11 +422,11 @@ function narniaExtension(pi: ExtensionAPI): void {
 						usage.cost += child.metadata.usage.cost;
 						usage.contextTokens += child.metadata.usage.contextTokens;
 						usage.turns += child.metadata.usage.turns;
-						if (child.stderr.trim()) stderr += `${stderr ? "\n\n" : ""}Task ${child.index + 1} stderr:\n${child.stderr.trim()}`;
+						if (child.stderr.trim()) stderr += `${stderr ? "\n\n" : ""}${child.title} stderr:\n${child.stderr.trim()}`;
 						if (child.metadata.provider) provider = child.metadata.provider;
 						if (child.metadata.model) model = child.metadata.model;
 						if (child.metadata.stopReason && !stopReason) stopReason = child.metadata.stopReason;
-						if (child.metadata.errorMessage) errorMessages.push(`Task ${child.index + 1}: ${child.metadata.errorMessage}`);
+						if (child.metadata.errorMessage) errorMessages.push(`${child.title}: ${child.metadata.errorMessage}`);
 					}
 
 					const aggregateExitCode = children.some((child) => child.exitCode === -1)
@@ -397,7 +437,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 					const firstChild = children[0];
 
 					return {
-						tasks: [...tasks],
+						tasks: tasks.map((task) => ({ title: task.title, content: task.content })),
 						children: children.map((child) => cloneChild(child, endedAt)),
 						startedAt,
 						endedAt,
@@ -443,11 +483,11 @@ function narniaExtension(pi: ExtensionAPI): void {
 				updateStatus(ctx);
 
 				try {
+					emitAggregateUpdate();
+
 					const childTools = Array.from(
 						new Set(pi.getAllTools().map((tool) => tool.name).filter((name) => name !== "delegate")),
 					);
-
-					emitAggregateUpdate();
 
 					const childPromises = children.map(
 						(child) =>
@@ -461,7 +501,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 								if (ctx.model) args.push("--model", `${ctx.model.provider}/${ctx.model.id}`);
 								args.push("--thinking", pi.getThinkingLevel());
 								args.push(ctx.isProjectTrusted() ? "--approve" : "--no-approve");
-								args.push(`Task: ${child.task}`);
+								args.push(`Task title: ${child.title}\n\nTask:\n${child.content}`);
 
 								const currentScript = process.argv[1];
 								const isBunVirtualScript = currentScript?.startsWith("/$bunfs/root/");
@@ -858,20 +898,9 @@ function narniaExtension(pi: ExtensionAPI): void {
 
 			},
 
-			renderCall(args, theme, context) {
+			renderCall(_args, _theme, context) {
 				const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
-				const argsObject = args && typeof args === "object" ? (args as { tasks?: unknown }) : {};
-				const rawTasks = Array.isArray(argsObject.tasks) ? argsObject.tasks : [];
-				const summary = rawTasks.length === 1 ? "1 task" : rawTasks.length > 1 ? `${rawTasks.length} tasks` : "tasks missing";
-				let rendered = `${theme.fg("toolTitle", theme.bold("delegate"))} ${theme.fg("dim", summary)}`;
-
-				for (let index = 0; index < rawTasks.length; index++) {
-					const task = typeof rawTasks[index] === "string" ? rawTasks[index].trim().replace(/\s+/g, " ") : "";
-					const preview = task.length > 100 ? `${task.slice(0, 97)}...` : task || "...";
-					rendered += `\n  ${theme.fg("dim", `delegate ${index + 1} ${preview}`)}`;
-				}
-
-				text.setText(rendered);
+				text.setText("");
 				return text;
 			},
 
@@ -880,8 +909,33 @@ function narniaExtension(pi: ExtensionAPI): void {
 				const content = result.content.find((part) => part.type === "text");
 				const contentText = content?.type === "text" ? content.text : "";
 				const argsObject = context.args && typeof context.args === "object" ? (context.args as { tasks?: unknown }) : {};
-				const argsTasks = Array.isArray(argsObject.tasks) ? argsObject.tasks.filter((task): task is string => typeof task === "string") : [];
-				const detailTasks = Array.isArray(details?.tasks) ? details.tasks : [];
+				const argsTasks: DelegateTask[] = [];
+				if (Array.isArray(argsObject.tasks)) {
+					for (const task of argsObject.tasks) {
+						if (!task || typeof task !== "object" || Array.isArray(task)) {
+							argsTasks.push({ title: "", content: "" });
+							continue;
+						}
+						const taskObject = task as { title?: unknown; content?: unknown };
+						argsTasks.push({
+							title: typeof taskObject.title === "string" ? taskObject.title.trim().replace(/\s+/g, " ") : "",
+							content: typeof taskObject.content === "string" ? taskObject.content.trim() : "",
+						});
+					}
+				}
+				const detailTasks: DelegateTask[] = [];
+				if (Array.isArray(details?.tasks)) {
+					for (const task of details.tasks) {
+						if (!task || typeof task !== "object" || Array.isArray(task)) {
+							detailTasks.push({ title: "", content: "" });
+							continue;
+						}
+						detailTasks.push({
+							title: typeof task.title === "string" ? task.title.trim().replace(/\s+/g, " ") : "",
+							content: typeof task.content === "string" ? task.content.trim() : "",
+						});
+					}
+				}
 				const detailChildren: Partial<DelegateChildDetails>[] = Array.isArray(details?.children)
 					? (details.children as Partial<DelegateChildDetails>[]).filter((child) => !!child && typeof child === "object")
 					: [];
@@ -895,12 +949,16 @@ function narniaExtension(pi: ExtensionAPI): void {
 					if (childIndex > maxChildIndex) maxChildIndex = childIndex;
 				}
 
-				const totalTasks = Math.max(detailTasks.length, argsTasks.length, maxChildIndex + 1, detailChildren.length);
+				const aggregateExitCode = typeof details?.exitCode === "number" ? details.exitCode : undefined;
+				const rejectedWithoutChildren = !!details && !isPartial && detailChildren.length === 0 && aggregateExitCode !== undefined && aggregateExitCode !== 0;
+				const totalTasks = rejectedWithoutChildren ? 0 : Math.max(detailTasks.length, argsTasks.length, maxChildIndex + 1, detailChildren.length);
 				const rows = Array.from({ length: totalTasks }, (_, index) => {
 					const child = childrenByIndex.get(index) ?? detailChildren[index];
-					const task = typeof child?.task === "string" && child.task.trim() ? child.task : detailTasks[index] || argsTasks[index] || "";
-					const normalizedTask = task.trim().replace(/\s+/g, " ");
-					const taskPreview = normalizedTask.length > 100 ? `${normalizedTask.slice(0, 97)}...` : normalizedTask || "...";
+					const childTitle = typeof child?.title === "string" && child.title.trim() ? child.title : detailTasks[index]?.title || argsTasks[index]?.title || "";
+					const title = childTitle.trim().replace(/\s+/g, " ");
+					const titlePreview = title.length > 100 ? `${title.slice(0, 97)}...` : title || "...";
+					const childContent = typeof child?.content === "string" && child.content.trim() ? child.content.trim() : "";
+					const content = childContent || detailTasks[index]?.content || argsTasks[index]?.content || "";
 					const metadata = child?.metadata;
 					const filesRead = Array.isArray(metadata?.filesRead) ? metadata.filesRead : [];
 					const filesModified = Array.isArray(metadata?.filesModified) ? metadata.filesModified : [];
@@ -947,19 +1005,15 @@ function narniaExtension(pi: ExtensionAPI): void {
 					if (usage?.cost) usageParts.push(`$${usage.cost.toFixed(4)}`);
 					if (usage?.contextTokens) usageParts.push(`ctx:${formatTokens(usage.contextTokens)}`);
 					const usageText = usageParts.join(" ");
-					const stats = [
-						usageText,
-						`${filesRead.length} read`,
-						`${filesModified.length} changed`,
-						`${commands.length} cmd${commands.length === 1 ? "" : "s"}`,
-					].filter(Boolean);
+					const stats = [`${filesRead.length} read`, `${filesModified.length} changed`, `${commands.length} cmds`];
 					const duration = typeof child?.durationMs === "number" && child.durationMs >= 0 ? `${(child.durationMs / 1000).toFixed(1)}s` : undefined;
 
 					return {
 						index,
 						child,
-						task,
-						taskPreview,
+						title,
+						titlePreview,
+						content,
 						metadata,
 						filesRead,
 						filesModified,
@@ -977,7 +1031,6 @@ function narniaExtension(pi: ExtensionAPI): void {
 						duration,
 					};
 				});
-				const aggregateExitCode = typeof details?.exitCode === "number" ? details.exitCode : undefined;
 				const running = isPartial || aggregateExitCode === -1 || rows.some((row) => row.running);
 				const failed =
 					context.isError ||
@@ -990,14 +1043,14 @@ function narniaExtension(pi: ExtensionAPI): void {
 				const statusColor = running ? "warning" : failed ? "error" : "success";
 
 				if (!expanded) {
-					let text = `${icon} ${theme.fg("toolTitle", theme.bold("delegate"))} ${theme.fg(statusColor, status)} ${theme.fg("dim", parentSummary)}`;
+					let text = `${theme.fg("toolTitle", theme.bold("delegate"))} ${theme.fg("dim", `${totalTasks} tasks`)}`;
 
 					for (const row of rows) {
 						const childIcon = row.running ? theme.fg("warning", "⏳") : row.failed ? theme.fg("error", "✗") : theme.fg("success", "✓");
-						const childColor = row.running ? "warning" : row.failed ? "error" : "success";
-						text += `\n  ${childIcon} ${theme.fg("toolTitle", `delegate ${row.index + 1}`)} ${theme.fg(childColor, row.status)} ${theme.fg("dim", row.taskPreview)}`;
-						if (row.resultExcerpt) text += `\n    ${theme.fg("toolOutput", row.resultExcerpt)}`;
-						if (row.stats.length > 0) text += `\n    ${theme.fg("dim", row.stats.join(" · "))}`;
+						text += `\n  ${childIcon} ${theme.fg("toolTitle", row.titlePreview)} ${theme.fg("dim", "|")} ${theme.fg("dim", row.stats.join(" · "))}`;
+						if (row.resultExcerpt) {
+							for (const line of row.resultExcerpt.split(/\r?\n/)) text += `\n    ${theme.fg("toolOutput", line)}`;
+						}
 					}
 
 					if (rows.length === 0 && contentText.trim()) text += `\n${theme.fg("toolOutput", contentText.trim())}`;
@@ -1013,17 +1066,16 @@ function narniaExtension(pi: ExtensionAPI): void {
 					),
 				);
 				container.addChild(new Spacer(1));
-				container.addChild(new Text(theme.fg("muted", "─── Children ───"), 0, 0));
+				container.addChild(new Text(theme.fg("muted", "─── Tasks ───"), 0, 0));
 
 				if (rows.length === 0) {
 					container.addChild(new Text(theme.fg("muted", "(none)"), 0, 0));
 				} else {
 					for (const row of rows) {
 						const childIcon = row.running ? theme.fg("warning", "⏳") : row.failed ? theme.fg("error", "✗") : theme.fg("success", "✓");
-						const childColor = row.running ? "warning" : row.failed ? "error" : "success";
 						container.addChild(
 							new Text(
-								`  ${childIcon} ${theme.fg("toolTitle", `delegate ${row.index + 1}`)} ${theme.fg(childColor, row.status)} ${theme.fg("dim", row.taskPreview)}`,
+								`  ${childIcon} ${theme.fg("toolTitle", row.titlePreview)} ${theme.fg("dim", "|")} ${theme.fg("dim", row.stats.join(" · "))}`,
 								0,
 								0,
 							),
@@ -1042,8 +1094,8 @@ function narniaExtension(pi: ExtensionAPI): void {
 
 				for (const row of rows) {
 					container.addChild(new Spacer(1));
-					container.addChild(new Text(theme.fg("muted", `─── Task ${row.index + 1} ───`), 0, 0));
-					container.addChild(new Text(theme.fg("dim", row.task || "(missing task)"), 0, 0));
+					container.addChild(new Text(theme.fg("muted", `─── ${row.title || `Task ${row.index + 1}`} ───`), 0, 0));
+					container.addChild(new Text(theme.fg("dim", row.content || "(missing task content)"), 0, 0));
 					container.addChild(new Spacer(1));
 					container.addChild(new Text(theme.fg("muted", "─── Final Output ───"), 0, 0));
 					if (row.fullOutput.trim()) container.addChild(new Markdown(row.fullOutput.trim(), 0, 0, getMarkdownTheme()));
