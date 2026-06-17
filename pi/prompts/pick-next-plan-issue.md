@@ -21,10 +21,40 @@ If the issue has status `ready-for-agent`, follow the process below:
 
 ## 2. Implement
 
+You should delegate a task to implement the picked issue.
+
+The task should include all the required context such as:
+
+- the goal.md
+- the picked issue
+- progress of the gaol so far - done issues and their logs
+
+The task should instruct the delegated child to:
+
 - Implement only the picked issue
 - Implement the issue completely
+- Explore the appropriate references indicated by the `goal.md` that relate to this issue.
+- If needed, explore for more existing patterns in order to make sure that your implementation will be consistent with the rest of the code base.
 - Make sure to always run the validation gates as defined by the project in order to ensure that you are not introducing any other issues as you implement.
 - If there are other issues that prevent green validation gates, make sure to also tackle that in order to leave the validation gate green when you are done with your implementation.
+
+You can use the following format to structure the task:
+
+```
+<goal path=".plans/goal-id/goal.md>
+// the contents of goal.md
+</goal>
+
+<issue path=".plans/goal-id/issues/issue-id.md>
+// the contents of the picked issue
+</issue>
+
+<progress>
+// a summary of the tasks already done, and their logs
+</progress>
+
+// instructions
+```
 
 ## 3. Close issue
 
