@@ -26,3 +26,12 @@ During the interview, lock down:
 - intentionally out-of-scope adjacent cases
 - implementation decisions that are not obvious from existing code
 - codebase references and external context
+
+The interview should not be bothered with:
+
+- validation gates that need to be run, these should be configured and defined by the projects docs, AGENTS.md, etc. It's not part of this process
+- What tests need to be written? The interview should care about defining the behaviors and these behaviors during the implementation time will give birth to the required tests. The interview should not try to look at things from the "should I write this test?" kind of perspective.
+
+Before starting the actual interview, you should do research and code exploration and start by presenting a first draft of the goal, even if that draft is naive, partial, or incomplete. Ask the user for any initial feedback on this first draft and then start the interview process.
+
+If at any point during the interview the user asks to see the current state of the goal, create a draft based on the understanding you have so far. Ask for any feedback and then continue the interview until you reach the point where you feel confident to present a final draft.
