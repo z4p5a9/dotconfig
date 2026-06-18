@@ -127,7 +127,7 @@ function parseWaitingEvent(data: unknown) {
 }
 
 export default function (pi: ExtensionAPI) {
-	if (process.env.PI_SUBAGENT_CHILD === "1") return;
+	if (process.env.PI_NARNIA_CHILD === "1") return;
 
 	let activeWaitingIds = new Set<string>();
 	let lastNotification: { subtitle: NotificationSubtitle; body: string; sentAt: number } | undefined;
