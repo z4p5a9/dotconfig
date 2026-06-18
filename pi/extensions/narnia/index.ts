@@ -4,7 +4,6 @@ import {
 	buildChildReturnedOutput,
 	createInitialChildren,
 	makeDelegateDetails,
-	updateChildContract,
 } from "./aggregation.ts";
 import { runDelegateChild } from "./child-runner.ts";
 import {
@@ -107,7 +106,6 @@ function narniaExtension(pi: ExtensionAPI): void {
 							child.endedAt = Date.now();
 							child.durationMs = Math.max(0, child.endedAt - child.startedAt);
 							child.returnedOutput = buildChildReturnedOutput(child);
-							updateChildContract(child);
 							emitAggregateUpdate();
 						}),
 					);

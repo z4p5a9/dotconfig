@@ -1,6 +1,4 @@
-import { CHILD_REQUIRED_SECTIONS, type DelegateChildDetails, type DelegateDetails, type DelegateTask } from "./delegate-contract.ts";
-
-const RETURNED_OUTPUT_CAP_BYTES = 12 * 1024;
+import { type DelegateChildDetails, type DelegateDetails, type DelegateTask } from "./delegate-contract.ts";
 
 export function createInitialChildren(tasks: DelegateTask[], startedAt: number): DelegateChildDetails[] {
 	return tasks.map((task, index) => ({
@@ -19,7 +17,6 @@ export function createInitialChildren(tasks: DelegateTask[], startedAt: number):
 		stderr: "",
 		finalOutput: "",
 		returnedOutput: "Delegate child running...",
-		contractMissingSections: [...CHILD_REQUIRED_SECTIONS],
 		metadata: {
 			filesRead: [],
 			filesModified: [],
@@ -38,43 +35,37 @@ export function createInitialChildren(tasks: DelegateTask[], startedAt: number):
 	}));
 }
 
-export function updateChildContract(child: DelegateChildDetails): void {
-	const lines = child.finalOutput.split(/\r?\n/).map((line) => line.trim());
-	child.contractMissingSections = CHILD_REQUIRED_SECTIONS.filter((section) => !lines.includes(section));
-}
-
 export function childFailed(child: DelegateChildDetails): boolean {
-	return (
-		child.status === "failed" ||
-		(child.exitCode !== -1 && (child.exitCode !== 0 || child.metadata.stopReason === "error" || child.metadata.stopReason === "aborted"))
-	);
+	if (child.status === "failed") return true;
+	if (child.exitCode === -1) return false;
+	if (child.exitCode !== 0) return true;
+	return child.metadata.stopReason === "error" || child.metadata.stopReason === "aborted";
 }
 
 export function childSucceeded(child: DelegateChildDetails): boolean {
-	return child.status === "completed" || (child.exitCode !== -1 && !childFailed(child));
+	if (child.status === "completed") return true;
+	if (child.exitCode === -1) return false;
+	return !childFailed(child);
 }
 
 export function buildChildReturnedOutput(child: DelegateChildDetails): string {
-	const failed = childFailed(child);
 	const output = child.finalOutput || child.metadata.errorMessage || child.stderr.trim() || "(no output)";
-	return failed
-		? `Delegate failed${child.metadata.stopReason ? ` (${child.metadata.stopReason})` : ""}${child.exitCode !== -1 && child.exitCode !== 0 ? ` [exit ${child.exitCode}]` : ""}.\n\n${output}`
-		: output;
-}
+	if (!childFailed(child)) return output;
 
-function capReturnedOutput(returnedOutput: string): string {
-	if (Buffer.byteLength(returnedOutput, "utf8") <= RETURNED_OUTPUT_CAP_BYTES) return returnedOutput;
-
-	const truncationNotice = "\n\n[Delegate output truncated to 12KB. Full per-child output preserved in tool details.]";
-	let cappedOutput = returnedOutput.slice(0, RETURNED_OUTPUT_CAP_BYTES - Buffer.byteLength(truncationNotice, "utf8"));
-	while (Buffer.byteLength(`${cappedOutput}${truncationNotice}`, "utf8") > RETURNED_OUTPUT_CAP_BYTES) cappedOutput = cappedOutput.slice(0, -1);
-	return `${cappedOutput.trimEnd()}${truncationNotice}`;
+	let failureLine = "Delegate failed";
+	if (child.metadata.stopReason) failureLine += ` (${child.metadata.stopReason})`;
+	if (child.exitCode !== -1 && child.exitCode !== 0) failureLine += ` [exit ${child.exitCode}]`;
+	return `${failureLine}.\n\n${output}`;
 }
 
 export function buildAggregateReturnedOutput(children: DelegateChildDetails[]): string {
-	let returnedOutput = `${children.filter(childSucceeded).length}/${children.length} tasks succeeded.`;
-	for (const child of children) returnedOutput += `\n\n## ${child.title}\n\n${child.returnedOutput || "Delegate child running..."}`;
-	return capReturnedOutput(returnedOutput);
+	const sections = [`${children.filter(childSucceeded).length}/${children.length} tasks succeeded.`];
+
+	for (const child of children) {
+		sections.push(`## ${child.title}\n\n${child.returnedOutput || "Delegate child running..."}`);
+	}
+
+	return sections.join("\n\n");
 }
 
 function cloneChild(child: DelegateChildDetails, endedAt: number): DelegateChildDetails {
@@ -95,7 +86,6 @@ function cloneChild(child: DelegateChildDetails, endedAt: number): DelegateChild
 		stderr: child.stderr,
 		finalOutput: child.finalOutput,
 		returnedOutput: child.returnedOutput,
-		contractMissingSections: [...child.contractMissingSections],
 		metadata: {
 			filesRead: [...child.metadata.filesRead],
 			filesModified: [...child.metadata.filesModified],
@@ -140,13 +130,17 @@ export function makeDelegateDetails(
 
 	for (const child of children) {
 		stdoutBytes += child.trace.stdoutBytes;
+
 		for (const [eventType, count] of Object.entries(child.trace.stdoutEventCounts)) {
 			aggregateStdoutEventCounts[eventType] = (aggregateStdoutEventCounts[eventType] ?? 0) + count;
 		}
+
 		for (const filePath of child.metadata.filesRead) filesRead.add(filePath);
 		for (const filePath of child.metadata.filesModified) filesModified.add(filePath);
-		tools.push(...child.metadata.tools.map((tool) => ({ name: tool.name, args: tool.args })));
-		commands.push(...child.metadata.commands.map((command) => ({ ...command })));
+
+		for (const tool of child.metadata.tools) tools.push({ name: tool.name, args: tool.args });
+		for (const command of child.metadata.commands) commands.push({ ...command });
+
 		usage.input += child.metadata.usage.input;
 		usage.output += child.metadata.usage.output;
 		usage.cacheRead += child.metadata.usage.cacheRead;
@@ -154,7 +148,10 @@ export function makeDelegateDetails(
 		usage.cost += child.metadata.usage.cost;
 		usage.contextTokens += child.metadata.usage.contextTokens;
 		usage.turns += child.metadata.usage.turns;
-		if (child.stderr.trim()) stderr += `${stderr ? "\n\n" : ""}${child.title} stderr:\n${child.stderr.trim()}`;
+
+		const trimmedStderr = child.stderr.trim();
+		if (trimmedStderr) stderr += `${stderr ? "\n\n" : ""}${child.title} stderr:\n${trimmedStderr}`;
+
 		if (child.metadata.provider) provider = child.metadata.provider;
 		if (child.metadata.model) model = child.metadata.model;
 		if (child.metadata.stopReason && !stopReason) stopReason = child.metadata.stopReason;
@@ -178,7 +175,6 @@ export function makeDelegateDetails(
 		stderr: children.length === 1 ? firstChild.stderr : stderr,
 		finalOutput: children.length === 1 ? firstChild.finalOutput : returnedOutput,
 		returnedOutput,
-		contractMissingSections: CHILD_REQUIRED_SECTIONS.filter((section) => children.some((child) => child.contractMissingSections.includes(section))),
 		metadata: {
 			filesRead: [...filesRead],
 			filesModified: [...filesModified],

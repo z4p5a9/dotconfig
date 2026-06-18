@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { buildChildReturnedOutput, childFailed, updateChildContract } from "./aggregation.ts";
+import { buildChildReturnedOutput, childFailed } from "./aggregation.ts";
 import { createChildEventState, processChildJsonLine } from "./child-events.ts";
 import { CHILD_BOOTSTRAP, type DelegateChildDetails } from "./delegate-contract.ts";
 
@@ -20,41 +20,54 @@ export function runDelegateChild(
 	return new Promise<void>((resolve) => {
 		const state = createChildEventState();
 		const args = ["--mode", "json", "-p", "--no-session"];
-		if (options.childTools.length > 0) args.push("--tools", options.childTools.join(","));
-		else args.push("--no-tools");
+
+		if (options.childTools.length > 0) {
+			args.push("--tools", options.childTools.join(","));
+		} else {
+			args.push("--no-tools");
+		}
+
 		args.push("--append-system-prompt", CHILD_BOOTSTRAP);
+
 		const model = options.getModel();
-		if (model) args.push("--model", `${model.provider}/${model.id}`);
+		if (model) {
+			args.push("--model", `${model.provider}/${model.id}`);
+		}
+
 		args.push("--thinking", options.getThinkingLevel());
 		args.push(options.isProjectTrusted() ? "--approve" : "--no-approve");
 		args.push(`Task title: ${child.title}\n\nTask:\n${child.content}`);
 
 		const currentScript = process.argv[1];
 		const isBunVirtualScript = currentScript?.startsWith("/$bunfs/root/");
+		const canRunCurrentScript = currentScript && !isBunVirtualScript && fs.existsSync(currentScript);
+
 		let command = "pi";
 		let commandArgs = args;
 
-		if (currentScript && !isBunVirtualScript && fs.existsSync(currentScript)) {
+		if (canRunCurrentScript) {
 			command = process.execPath;
 			commandArgs = [currentScript, ...args];
 		} else {
 			const execName = path.basename(process.execPath).toLowerCase();
-			if (!/^(node|bun)(\.exe)?$/.test(execName)) command = process.execPath;
+			if (!/^(node|bun)(\.exe)?$/.test(execName)) {
+				command = process.execPath;
+			}
 		}
 
-		let buffer = "";
-		let closed = false;
-		let settled = false;
+		let stdoutBuffer = "";
+		let processClosed = false;
+		let promiseSettled = false;
 		let failureRequested = false;
-		let abortTimer: ReturnType<typeof setTimeout> | undefined;
+		let terminationTimer: ReturnType<typeof setTimeout> | undefined;
 		let abortListener: (() => void) | undefined;
 
 		const cleanup = () => {
-			if (abortTimer) clearTimeout(abortTimer);
+			if (terminationTimer) clearTimeout(terminationTimer);
 			if (abortListener && options.signal) options.signal.removeEventListener("abort", abortListener);
 		};
 
-		const processLine = (line: string) => {
+		const processStdoutLine = (line: string) => {
 			const result = processChildJsonLine(child, state, line);
 			if (result.assistantMessageChanged || result.toolExecutionStarted) options.emitAggregateUpdate();
 		};
@@ -65,23 +78,24 @@ export function runDelegateChild(
 		};
 
 		const finishChild = (exitCode: number) => {
-			if (settled) return;
-			settled = true;
+			if (promiseSettled) return;
+			promiseSettled = true;
 			cleanup();
-			if (buffer.trim()) {
+
+			if (stdoutBuffer.trim()) {
 				try {
-					processLine(buffer);
+					processStdoutLine(stdoutBuffer);
 				} catch (error) {
 					appendChildError(error);
 					exitCode = 1;
 				}
 			}
+
 			child.exitCode = exitCode;
 			child.status = childFailed(child) ? "failed" : "completed";
 			child.endedAt = Date.now();
 			child.durationMs = Math.max(0, child.endedAt - child.startedAt);
 			child.returnedOutput = buildChildReturnedOutput(child);
-			updateChildContract(child);
 			options.emitAggregateUpdate();
 			resolve();
 		};
@@ -101,23 +115,23 @@ export function runDelegateChild(
 		}
 
 		const requestFailure = (error: unknown, waitForClose: boolean) => {
-			if (settled || failureRequested) return;
+			if (promiseSettled || failureRequested) return;
 			failureRequested = true;
 			appendChildError(error);
 			child.status = "failed";
 			child.returnedOutput = buildChildReturnedOutput(child);
 			options.emitAggregateUpdate();
 
-			if (!waitForClose || closed) {
+			if (!waitForClose || processClosed) {
 				finishChild(1);
 				return;
 			}
 
 			try {
 				proc.kill("SIGTERM");
-				abortTimer = setTimeout(() => {
+				terminationTimer = setTimeout(() => {
 					try {
-						if (!closed && !settled) proc.kill("SIGKILL");
+						if (!processClosed && !promiseSettled) proc.kill("SIGKILL");
 					} catch (killError) {
 						appendChildError(killError);
 						finishChild(1);
@@ -132,10 +146,10 @@ export function runDelegateChild(
 		proc.stdout.on("data", (data: Buffer) => {
 			if (failureRequested) return;
 			try {
-				buffer += data.toString();
-				const lines = buffer.split("\n");
-				buffer = lines.pop() || "";
-				for (const line of lines) processLine(line);
+				stdoutBuffer += data.toString();
+				const lines = stdoutBuffer.split("\n");
+				stdoutBuffer = lines.pop() || "";
+				for (const line of lines) processStdoutLine(line);
 			} catch (error) {
 				requestFailure(error, true);
 			}
@@ -153,7 +167,7 @@ export function runDelegateChild(
 
 		proc.on("error", (error: unknown) => requestFailure(error, false));
 		proc.on("close", (code: number | null, exitSignal: string | null) => {
-			closed = true;
+			processClosed = true;
 			if (code !== null) finishChild(code);
 			else if (exitSignal === "SIGKILL") finishChild(137);
 			else if (exitSignal === "SIGTERM") finishChild(143);
@@ -162,11 +176,11 @@ export function runDelegateChild(
 
 		abortListener = () => {
 			try {
-				if (closed || settled) return;
+				if (processClosed || promiseSettled) return;
 				proc.kill("SIGTERM");
-				abortTimer = setTimeout(() => {
+				terminationTimer = setTimeout(() => {
 					try {
-						if (!closed && !settled) proc.kill("SIGKILL");
+						if (!processClosed && !promiseSettled) proc.kill("SIGKILL");
 					} catch (error) {
 						requestFailure(error, false);
 					}

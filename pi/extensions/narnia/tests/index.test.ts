@@ -14,26 +14,7 @@ import narniaExtension from "../index.ts";
 const originalChildEnv = process.env.PI_NARNIA_CHILD;
 
 function childOutput(result: string) {
-	return `## Result
-${result}
-
-## Changed
-- none
-
-## Inspected
-- none
-
-## Commands
-- none
-
-## Decisions
-- none
-
-## Risks
-- none
-
-## Needs Parent/User
-- none`;
+	return `Result: ${result}`;
 }
 
 function createHarness(branch: unknown[] = []) {
@@ -197,10 +178,6 @@ describe("narnia extension", () => {
 			content: [{ type: "text", text: "Delegate tasks is required." }],
 			details: { exitCode: 1, children: [] },
 		});
-		await expect(delegate.execute("call", { task: "legacy" }, undefined, undefined, harness.ctx)).resolves.toMatchObject({
-			content: [{ type: "text", text: "Delegate accepts only tasks: { title: string; content: string }[]. Use delegate({ tasks: [{ title, content }] })." }],
-			details: { exitCode: 1, children: [] },
-		});
 		await expect(delegate.execute("call", { tasks: [{ title: "one two three four five", content: "x" }] }, undefined, undefined, harness.ctx)).resolves.toMatchObject({
 			content: [{ type: "text", text: "Delegate task 1 title must be 1-4 words." }],
 			details: { exitCode: 1, children: [] },
@@ -274,7 +251,7 @@ describe("narnia extension", () => {
 			"--tools",
 			"read,bash,write",
 			"--append-system-prompt",
-			expect.stringContaining("You are a Narnia child Pi process"),
+			"Follow the delegated task exactly. Do not delegate further. Return only what the parent needs.",
 			"--model",
 			"fake/model",
 			"--thinking",
@@ -285,11 +262,37 @@ describe("narnia extension", () => {
 		expect(result.content[0].text).toContain("1/2 tasks succeeded.");
 		expect(result.details.exitCode).toBe(1);
 		expect(result.details.children.map((child: any) => child.status)).toEqual(["completed", "failed"]);
-		expect(result.details.children[0].finalOutput).toContain("## Result\nok");
+		expect(result.details.children[0].finalOutput).toContain("Result: ok");
 		expect(result.details.children[1].returnedOutput).toContain("Delegate failed (error) [exit 1]");
 		expect(result.details.metadata.filesRead).toEqual(["src/a.ts"]);
 		expect(result.details.metadata.commands).toEqual([expect.objectContaining({ command: "npm test", exitCode: 0, isTest: true })]);
 		expect(updates.length).toBeGreaterThan(0);
+	});
+
+	it("does not cap aggregate returned output", async () => {
+		const harness = createHarness();
+		await harness.commands.narnia.handler("on", harness.ctx);
+		const delegate = harness.delegate();
+		const largeOutput = "x".repeat(13 * 1024);
+
+		queueChild(
+			[
+				{
+					type: "message_end",
+					message: {
+						role: "assistant",
+						content: [{ type: "text", text: largeOutput }],
+						stopReason: "stop",
+					},
+				},
+			],
+			0,
+		);
+
+		const result = await delegate.execute("call", { tasks: [{ title: "Large", content: "produce large output" }] }, undefined, undefined, harness.ctx);
+
+		expect(result.content[0].text).toContain(largeOutput);
+		expect(result.details.children[0].finalOutput).toBe(largeOutput);
 	});
 
 	it("rejects overlapping delegate calls", async () => {
@@ -332,7 +335,6 @@ describe("narnia extension", () => {
 						durationMs: 12,
 						finalOutput: childOutput("rendered"),
 						returnedOutput: childOutput("rendered"),
-						contractMissingSections: [],
 						metadata: {
 							filesRead: ["a.ts"],
 							filesModified: [],

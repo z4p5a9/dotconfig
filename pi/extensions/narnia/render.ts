@@ -3,6 +3,50 @@ import { Container, Markdown, Spacer, Text } from "@earendil-works/pi-tui";
 import { formatTokens } from "./mode.ts";
 import type { DelegateChildDetails, DelegateDetails, DelegateTask } from "./delegate-contract.ts";
 
+function normalizeTasks(tasks: unknown): DelegateTask[] {
+	const normalizedTasks: DelegateTask[] = [];
+	if (!Array.isArray(tasks)) return normalizedTasks;
+
+	for (const task of tasks) {
+		if (!task || typeof task !== "object" || Array.isArray(task)) {
+			normalizedTasks.push({ title: "", content: "" });
+			continue;
+		}
+
+		const taskObject = task as { title?: unknown; content?: unknown };
+		normalizedTasks.push({
+			title: typeof taskObject.title === "string" ? taskObject.title.trim().replace(/\s+/g, " ") : "",
+			content: typeof taskObject.content === "string" ? taskObject.content.trim() : "",
+		});
+	}
+
+	return normalizedTasks;
+}
+
+function resultExcerptFrom(fullOutput: string, running: boolean): string {
+	let resultExcerpt = fullOutput.trim() || (running ? "Delegate child running..." : "(no output)");
+	if (resultExcerpt.length > 320) resultExcerpt = `${resultExcerpt.slice(0, 317).trimEnd()}...`;
+
+	const excerptLines = resultExcerpt.split(/\r?\n/);
+	if (excerptLines.length > 4) resultExcerpt = `${excerptLines.slice(0, 4).join("\n").trimEnd()}...`;
+
+	return resultExcerpt;
+}
+
+function formatUsageSummary(usage: DelegateChildDetails["metadata"]["usage"] | undefined): string {
+	const usageParts: string[] = [];
+
+	if (usage?.turns) usageParts.push(`${usage.turns} turn${usage.turns === 1 ? "" : "s"}`);
+	if (usage?.input) usageParts.push(`↑${formatTokens(usage.input)}`);
+	if (usage?.output) usageParts.push(`↓${formatTokens(usage.output)}`);
+	if (usage?.cacheRead) usageParts.push(`R${formatTokens(usage.cacheRead)}`);
+	if (usage?.cacheWrite) usageParts.push(`W${formatTokens(usage.cacheWrite)}`);
+	if (usage?.cost) usageParts.push(`$${usage.cost.toFixed(4)}`);
+	if (usage?.contextTokens) usageParts.push(`ctx:${formatTokens(usage.contextTokens)}`);
+
+	return usageParts.join(" ");
+}
+
 export function renderDelegateCall(_args: unknown, _theme: unknown, context: { lastComponent?: unknown }): Text {
 	const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
 	text.setText("");
@@ -18,37 +62,14 @@ export function renderDelegateResult(
 	const details = result.details as Partial<DelegateDetails> | undefined;
 	const content = result.content.find((part) => part.type === "text");
 	const contentText = content?.type === "text" ? content.text : "";
+
 	const argsObject = context.args && typeof context.args === "object" ? (context.args as { tasks?: unknown }) : {};
-	const argsTasks: DelegateTask[] = [];
-	if (Array.isArray(argsObject.tasks)) {
-		for (const task of argsObject.tasks) {
-			if (!task || typeof task !== "object" || Array.isArray(task)) {
-				argsTasks.push({ title: "", content: "" });
-				continue;
-			}
-			const taskObject = task as { title?: unknown; content?: unknown };
-			argsTasks.push({
-				title: typeof taskObject.title === "string" ? taskObject.title.trim().replace(/\s+/g, " ") : "",
-				content: typeof taskObject.content === "string" ? taskObject.content.trim() : "",
-			});
-		}
-	}
-	const detailTasks: DelegateTask[] = [];
-	if (Array.isArray(details?.tasks)) {
-		for (const task of details.tasks) {
-			if (!task || typeof task !== "object" || Array.isArray(task)) {
-				detailTasks.push({ title: "", content: "" });
-				continue;
-			}
-			detailTasks.push({
-				title: typeof task.title === "string" ? task.title.trim().replace(/\s+/g, " ") : "",
-				content: typeof task.content === "string" ? task.content.trim() : "",
-			});
-		}
-	}
+	const argsTasks = normalizeTasks(argsObject.tasks);
+	const detailTasks = normalizeTasks(details?.tasks);
 	const detailChildren: Partial<DelegateChildDetails>[] = Array.isArray(details?.children)
 		? (details.children as Partial<DelegateChildDetails>[]).filter((child) => !!child && typeof child === "object")
 		: [];
+
 	const childrenByIndex = new Map<number, Partial<DelegateChildDetails>>();
 	let maxChildIndex = -1;
 
@@ -86,33 +107,8 @@ export function renderDelegateResult(
 			(typeof child?.finalOutput === "string" && child.finalOutput) ||
 			(typeof child?.returnedOutput === "string" && child.returnedOutput) ||
 			"";
-		const outputLines = fullOutput.split(/\r?\n/);
-		const resultStart = outputLines.findIndex((line) => line.trim() === "## Result");
-		let resultExcerpt = "";
-
-		if (resultStart >= 0) {
-			const excerptLines: string[] = [];
-			for (const line of outputLines.slice(resultStart + 1)) {
-				if (/^##\s+/.test(line.trim())) break;
-				if (line.trim() || excerptLines.length > 0) excerptLines.push(line);
-			}
-			resultExcerpt = excerptLines.join("\n").trim();
-		}
-
-		if (!resultExcerpt) resultExcerpt = outputLines.map((line) => line.trim()).find(Boolean) || (running ? "Delegate child running..." : "(no output)");
-		if (resultExcerpt.length > 320) resultExcerpt = `${resultExcerpt.slice(0, 317).trimEnd()}...`;
-		const excerptLines = resultExcerpt.split(/\r?\n/);
-		if (excerptLines.length > 4) resultExcerpt = `${excerptLines.slice(0, 4).join("\n").trimEnd()}...`;
-
-		const usageParts: string[] = [];
-		if (usage?.turns) usageParts.push(`${usage.turns} turn${usage.turns === 1 ? "" : "s"}`);
-		if (usage?.input) usageParts.push(`↑${formatTokens(usage.input)}`);
-		if (usage?.output) usageParts.push(`↓${formatTokens(usage.output)}`);
-		if (usage?.cacheRead) usageParts.push(`R${formatTokens(usage.cacheRead)}`);
-		if (usage?.cacheWrite) usageParts.push(`W${formatTokens(usage.cacheWrite)}`);
-		if (usage?.cost) usageParts.push(`$${usage.cost.toFixed(4)}`);
-		if (usage?.contextTokens) usageParts.push(`ctx:${formatTokens(usage.contextTokens)}`);
-		const usageText = usageParts.join(" ");
+		const resultExcerpt = resultExcerptFrom(fullOutput, running);
+		const usageText = formatUsageSummary(usage);
 		const stats = [`${filesRead.length} read`, `${filesModified.length} changed`, `${commands.length} cmds`];
 		const duration = typeof child?.durationMs === "number" && child.durationMs >= 0 ? `${(child.durationMs / 1000).toFixed(1)}s` : undefined;
 
@@ -139,6 +135,7 @@ export function renderDelegateResult(
 			duration,
 		};
 	});
+
 	const running = isPartial || aggregateExitCode === -1 || rows.some((row) => row.running);
 	const failed = context.isError || (aggregateExitCode !== undefined && aggregateExitCode !== 0 && aggregateExitCode !== -1) || rows.some((row) => row.failed);
 	const succeededTasks = rows.filter((row) => !row.running && !row.failed).length;
@@ -258,9 +255,6 @@ export function renderDelegateResult(
 		if (row.metadata?.provider || row.metadata?.model) metadataLines.push(`Model: ${[row.metadata.provider, row.metadata.model].filter(Boolean).join("/")}`);
 		if (row.stopReason) metadataLines.push(`Stop: ${row.stopReason}`);
 		if (row.metadata?.errorMessage) metadataLines.push(`Error: ${row.metadata.errorMessage}`);
-		if (Array.isArray(row.child?.contractMissingSections) && row.child.contractMissingSections.length > 0) {
-			metadataLines.push(`Missing sections: ${row.child.contractMissingSections.join(", ")}`);
-		}
 		container.addChild(new Spacer(1));
 		container.addChild(new Text(theme.fg("muted", "─── Metadata ───"), 0, 0));
 		container.addChild(new Text(metadataLines.map((line) => theme.fg("dim", line)).join("\n"), 0, 0));
