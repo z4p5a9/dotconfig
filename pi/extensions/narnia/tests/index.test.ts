@@ -278,6 +278,7 @@ describe("narnia extension", () => {
 		]);
 		expect(result.details.tasks[1].text).toContain("Delegate failed (error) [exit 1]");
 		expect(updates.length).toBeGreaterThan(0);
+		expect(updates.some((update: any) => update.details.tasks.some((task: any) => task.exitCode === -1 && task.text === ""))).toBe(true);
 	});
 
 	it("does not cap aggregate returned output", async () => {
@@ -304,6 +305,43 @@ describe("narnia extension", () => {
 
 		expect(result.content[0].text).toContain(largeOutput);
 		expect(result.details.tasks[0].text).toBe(largeOutput);
+	});
+
+	it("streams child message_update text before the child closes", async () => {
+		const harness = createHarness();
+		await harness.commands.narnia.handler("on", harness.ctx);
+		const delegate = harness.delegate();
+		const proc = makeProcess();
+		const updates: any[] = [];
+		let resolved = false;
+		spawnMock.mockReturnValueOnce(proc);
+
+		const execution = delegate.execute("call", { tasks: [{ title: "Stream", content: "stream output" }] }, undefined, (update: any) => updates.push(update), harness.ctx);
+		execution.then(() => {
+			resolved = true;
+		});
+
+		proc.stdout.emit("data", Buffer.from(`${JSON.stringify({
+			type: "message_update",
+			message: { role: "assistant", content: [{ type: "text", text: "partial output" }] },
+			assistantMessageEvent: { type: "text_delta", contentIndex: 0, delta: "partial output", partial: { role: "assistant", content: [{ type: "text", text: "partial output" }] } },
+		})}\n`));
+
+		const streamUpdateIndex = updates.findIndex((update) => update.details.tasks[0].exitCode === -1 && update.details.tasks[0].text === "partial output");
+		expect(streamUpdateIndex).toBeGreaterThan(-1);
+		await Promise.resolve();
+		expect(resolved).toBe(false);
+
+		proc.stdout.emit("data", Buffer.from(`${JSON.stringify({
+			type: "message_end",
+			message: { role: "assistant", content: [{ type: "text", text: "final output" }], stopReason: "stop" },
+		})}\n`));
+		proc.emit("close", 0, null);
+
+		const result = await execution;
+		const finalUpdateIndex = updates.findIndex((update) => update.details.tasks[0].exitCode === 0 && update.details.tasks[0].text === "final output");
+		expect(finalUpdateIndex).toBeGreaterThan(streamUpdateIndex);
+		expect(result.details.tasks[0].text).toBe("final output");
 	});
 
 	it("rejects overlapping delegate calls", async () => {
@@ -352,7 +390,46 @@ describe("narnia extension", () => {
 		const call = delegate.renderCall(context.args, theme, { lastComponent: undefined });
 		expect(call.text).toContain("delegate: 1 task");
 		expect(call.text).toContain("Render");
-		expect(() => delegate.renderResult(result, { expanded: false, isPartial: false }, theme, context)).not.toThrow();
-		expect(() => delegate.renderResult(result, { expanded: true, isPartial: false }, theme, context)).not.toThrow();
+
+		const collapsed = delegate.renderResult(result, { expanded: false, isPartial: false }, theme, context);
+		expect(collapsed.text).toContain("✓ Render");
+		expect(collapsed.text).not.toContain("delegate");
+		expect(collapsed.text).not.toContain("exit 0");
+
+		const expanded = delegate.renderResult(result, { expanded: true, isPartial: false }, theme, context);
+		const expandedText = expanded.children.map((child: any) => child.text ?? "").join("\n");
+		expect(expandedText).toContain("done");
+		expect(expandedText).not.toContain("delegate");
+		expect(expandedText).not.toContain("exit 0");
+
+		const runningResult = {
+			content: [{ type: "text", text: "0/1 tasks succeeded.\n\n## Wait" }],
+			details: { tasks: [{ title: "Wait", exitCode: -1, durationMs: 0, text: "", tools: [] }], exitCode: -1 },
+		};
+		const runningContext = { args: { tasks: [{ title: "Wait", content: "wait" }] }, isError: false };
+		const running = delegate.renderResult(runningResult, { expanded: false, isPartial: true }, theme, runningContext);
+		expect(running.text).toContain("⏳ Wait");
+		expect(running.text).not.toContain("running");
+		expect(running.text).not.toContain("exit -1");
+
+		const runningExpanded = delegate.renderResult(runningResult, { expanded: true, isPartial: true }, theme, runningContext);
+		const runningExpandedText = runningExpanded.children.map((child: any) => child.text ?? "").join("\n");
+		expect(runningExpandedText).toContain("⏳ Wait");
+		expect(runningExpandedText).not.toContain("running");
+		expect(runningExpandedText).not.toContain("exit -1");
+		expect(runningExpandedText).not.toContain("no final output");
+
+		const failed = delegate.renderResult(
+			{
+				content: [{ type: "text", text: "0/1 tasks succeeded.\n\n## Fail\n\nDelegate failed (error) [exit 2].\n\nstderr" }],
+				details: { tasks: [{ title: "Fail", exitCode: 2, durationMs: 5, text: "Delegate failed (error) [exit 2].\n\nstderr", tools: [] }], exitCode: 1 },
+			},
+			{ expanded: false, isPartial: false },
+			theme,
+			{ args: { tasks: [{ title: "Fail", content: "fail" }] }, isError: true },
+		);
+		expect(failed.text).toContain("failed");
+		expect(failed.text).toContain("stderr");
+		expect(failed.text).not.toContain("exit 2");
 	});
 });

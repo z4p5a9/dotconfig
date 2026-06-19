@@ -50,7 +50,7 @@ export function renderDelegateResult(
 		for (const rawTask of (context.args as { tasks: unknown[] }).tasks) {
 			if (!rawTask || typeof rawTask !== "object" || Array.isArray(rawTask)) continue;
 			const title = typeof (rawTask as { title?: unknown }).title === "string" && (rawTask as { title: string }).title.trim() ? (rawTask as { title: string }).title.trim().replace(/\s+/g, " ") : `Task ${tasks.length + 1}`;
-			tasks.push({ title, exitCode: -1, text: "Delegate child running...", durationMs: 0, tools: [] });
+			tasks.push({ title, exitCode: -1, text: "", durationMs: 0, tools: [] });
 		}
 	}
 
@@ -60,28 +60,36 @@ export function renderDelegateResult(
 	const failed = context.isError || (aggregateExitCode !== undefined && aggregateExitCode !== 0 && aggregateExitCode !== -1) || tasks.some((task) => task.exitCode !== 0 && task.exitCode !== -1);
 	const succeededTasks = tasks.filter((task) => task.exitCode === 0).length;
 	const icon = running ? theme.fg("warning", "⏳") : failed ? theme.fg("error", "✗") : theme.fg("success", "✓");
-	const status = running ? "running" : failed ? "failed" : "done";
-	const statusColor = running ? "warning" : failed ? "error" : "success";
+	const status = running ? "" : failed ? "failed" : "done";
+	const statusColor = failed ? "error" : "success";
 
 	if (!expanded) {
-		let output = `${theme.fg("toolTitle", theme.bold("delegate"))} ${theme.fg("dim", `${tasks.length} task${tasks.length === 1 ? "" : "s"}`)}`;
+		let output = "";
 		for (const task of tasks) {
 			const taskIcon = task.exitCode === -1 ? theme.fg("warning", "⏳") : task.exitCode === 0 ? theme.fg("success", "✓") : theme.fg("error", "✗");
 			const title = task.title.length > 100 ? `${task.title.slice(0, 97)}...` : task.title;
-			const duration = task.durationMs ? `${(task.durationMs / 1000).toFixed(1)}s` : "0.0s";
-			let excerpt = task.text.trim() || (task.exitCode === -1 ? "Delegate child running..." : "(no output)");
+			const meta: string[] = [];
+			if (task.exitCode !== 0 && task.exitCode !== -1) meta.push("failed");
+			if (task.tools.length > 0) meta.push(`${task.tools.length} tool${task.tools.length === 1 ? "" : "s"}`);
+			if (task.durationMs > 0) meta.push(`${(task.durationMs / 1000).toFixed(1)}s`);
+			const suffix = meta.length ? ` ${theme.fg("dim", `· ${meta.join(" · ")}`)}` : "";
+			let excerpt = task.text.trim();
+			if (task.exitCode !== 0 && task.exitCode !== -1 && excerpt.startsWith("Delegate failed")) {
+				const body = excerpt.split(/\r?\n\r?\n/).slice(1).join("\n\n").trim();
+				excerpt = body;
+			}
 			if (excerpt.length > 320) excerpt = `${excerpt.slice(0, 317).trimEnd()}...`;
-			const lines = excerpt.split(/\r?\n/);
+			const lines = excerpt ? excerpt.split(/\r?\n/) : [];
 			if (lines.length > 4) excerpt = `${lines.slice(0, 4).join("\n").trimEnd()}...`;
-			output += `\n  ${taskIcon} ${theme.fg("toolTitle", title)} ${theme.fg("dim", `| exit ${task.exitCode} · ${task.tools.length} tools · ${duration}`)}`;
-			for (const line of excerpt.split(/\r?\n/)) output += `\n    ${theme.fg("toolOutput", line)}`;
+			output += `${output ? "\n" : ""}  ${taskIcon} ${theme.fg("toolTitle", title)}${suffix}`;
+			if (excerpt) for (const line of excerpt.split(/\r?\n/)) output += `\n    ${theme.fg("toolOutput", line)}`;
 		}
-		if (tasks.length === 0 && contentText.trim()) output += `\n${theme.fg("toolOutput", contentText.trim())}`;
+		if (tasks.length === 0 && contentText.trim()) output = theme.fg("toolOutput", contentText.trim());
 		return new Text(output, 0, 0);
 	}
 
 	const container = new Container();
-	container.addChild(new Text(`${icon} ${theme.fg("toolTitle", theme.bold("delegate"))} ${theme.fg(statusColor, status)} ${theme.fg("dim", `${succeededTasks}/${tasks.length} tasks succeeded`)}`, 0, 0));
+	container.addChild(new Text(`${icon}${status ? ` ${theme.fg(statusColor, status)}` : ""} ${theme.fg("dim", `${succeededTasks}/${tasks.length} tasks succeeded`)}`, 0, 0));
 
 	if (tasks.length === 0) {
 		if (contentText.trim()) {
@@ -94,27 +102,37 @@ export function renderDelegateResult(
 
 	for (const task of tasks) {
 		const taskIcon = task.exitCode === -1 ? theme.fg("warning", "⏳") : task.exitCode === 0 ? theme.fg("success", "✓") : theme.fg("error", "✗");
+		const meta: string[] = [];
+		if (task.exitCode !== 0 && task.exitCode !== -1) meta.push(`failed (exit ${task.exitCode})`);
+		if (task.durationMs > 0) meta.push(`${(task.durationMs / 1000).toFixed(1)}s`);
+		if (task.tools.length > 0) meta.push(`${task.tools.length} tool${task.tools.length === 1 ? "" : "s"}`);
+		const suffix = meta.length ? ` ${theme.fg("dim", `· ${meta.join(" · ")}`)}` : "";
 		container.addChild(new Spacer(1));
-		container.addChild(new Text(`${taskIcon} ${theme.fg("toolTitle", task.title)} ${theme.fg("dim", `exit ${task.exitCode} · ${(task.durationMs / 1000).toFixed(1)}s · ${task.tools.length} tools`)}`, 0, 0));
-		container.addChild(new Spacer(1));
-		container.addChild(new Text(theme.fg("muted", "─── Output ───"), 0, 0));
-		if (task.text.trim()) container.addChild(new Markdown(task.text.trim(), 0, 0, getMarkdownTheme()));
-		else container.addChild(new Text(theme.fg("muted", task.exitCode === -1 ? "(no final output yet)" : "(no output)"), 0, 0));
-		container.addChild(new Spacer(1));
-		container.addChild(new Text(theme.fg("muted", "─── Tools ───"), 0, 0));
-		if (task.tools.length === 0) {
-			container.addChild(new Text(theme.fg("muted", "(none)"), 0, 0));
-		} else {
-			for (let index = 0; index < task.tools.length; index++) {
-				const tool = task.tools[index];
-				let preview = "";
-				try {
-					preview = tool.args === undefined ? "" : JSON.stringify(tool.args);
-				} catch {
-					preview = "[unserializable args]";
+		container.addChild(new Text(`${taskIcon} ${theme.fg("toolTitle", task.title)}${suffix}`, 0, 0));
+		const taskText = task.text.trim();
+		if (taskText || task.exitCode !== -1) {
+			container.addChild(new Spacer(1));
+			container.addChild(new Text(theme.fg("muted", "─── Output ───"), 0, 0));
+			if (taskText) container.addChild(new Markdown(taskText, 0, 0, getMarkdownTheme()));
+			else container.addChild(new Text(theme.fg("muted", "(no output)"), 0, 0));
+		}
+		if (task.tools.length > 0 || task.exitCode !== -1) {
+			container.addChild(new Spacer(1));
+			container.addChild(new Text(theme.fg("muted", "─── Tools ───"), 0, 0));
+			if (task.tools.length === 0) {
+				container.addChild(new Text(theme.fg("muted", "(none)"), 0, 0));
+			} else {
+				for (let index = 0; index < task.tools.length; index++) {
+					const tool = task.tools[index];
+					let preview = "";
+					try {
+						preview = tool.args === undefined ? "" : JSON.stringify(tool.args);
+					} catch {
+						preview = "[unserializable args]";
+					}
+					if (preview.length > 160) preview = `${preview.slice(0, 157)}...`;
+					container.addChild(new Text(theme.fg("toolOutput", `${index + 1}. ${tool.name}${preview ? ` ${preview}` : ""}`), 0, 0));
 				}
-				if (preview.length > 160) preview = `${preview.slice(0, 157)}...`;
-				container.addChild(new Text(theme.fg("toolOutput", `${index + 1}. ${tool.name}${preview ? ` ${preview}` : ""}`), 0, 0));
 			}
 		}
 	}

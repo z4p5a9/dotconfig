@@ -34,7 +34,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 	const textFrom = (tasks: DelegateTaskResult[]) => {
 		const doneTasks = tasks.filter((task) => task.exitCode !== -1);
 		const succeededTasks = doneTasks.filter((task) => task.exitCode === 0).length;
-		return [`${succeededTasks}/${tasks.length} tasks succeeded.`, ...tasks.map((task) => `## ${task.title}\n\n${task.text || "Delegate child running..."}`)].join("\n\n");
+		return [`${succeededTasks}/${tasks.length} tasks succeeded.`, ...tasks.map((task) => task.text.trim() ? `## ${task.title}\n\n${task.text}` : `## ${task.title}`)].join("\n\n");
 	};
 
 	function updateStatus(ctx: ExtensionContext): void {
@@ -162,7 +162,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 					};
 				}
 
-				const taskResults = tasks.map((task): DelegateTaskResult => ({ title: task.title, exitCode: -1, text: "Delegate child running...", durationMs: 0, tools: [] }));
+				const taskResults = tasks.map((task): DelegateTaskResult => ({ title: task.title, exitCode: -1, text: "", durationMs: 0, tools: [] }));
 				const emitUpdate = () => {
 					try {
 						onUpdate?.({ content: [{ type: "text", text: textFrom(taskResults) }], details: detailsFrom(taskResults) });

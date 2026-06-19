@@ -41,7 +41,7 @@ export function runDelegateTask(
 		let stdoutBuffer = "";
 		let stderr = "";
 		let finalOutput = "";
-		let returnedText = "Delegate child running...";
+		let returnedText = "";
 		let stopReason: string | undefined;
 		let errorMessage: string | undefined;
 		let processClosed = false;
@@ -112,6 +112,7 @@ export function runDelegateTask(
 			const typedEvent = event as {
 				type?: unknown;
 				message?: { role?: unknown; content?: unknown; provider?: unknown; model?: unknown; stopReason?: unknown; errorMessage?: unknown };
+				assistantMessageEvent?: unknown;
 				toolName?: unknown;
 				args?: unknown;
 				messages?: unknown;
@@ -120,8 +121,23 @@ export function runDelegateTask(
 			if (typedEvent.type === "tool_execution_start") {
 				const toolName = typeof typedEvent.toolName === "string" ? typedEvent.toolName : "tool";
 				tools.push({ name: toolName, args: typedEvent.args });
-				returnedText = `Delegate child running: ${toolName}`;
 				options.onUpdate?.(snapshot());
+				return;
+			}
+
+			if (typedEvent.type === "message_update") {
+				const message = typedEvent.message;
+				if (message?.role !== "assistant") return;
+				let text = textFromContent(message.content);
+				if (!text && typedEvent.assistantMessageEvent && typeof typedEvent.assistantMessageEvent === "object") {
+					const streamEvent = typedEvent.assistantMessageEvent as { partial?: unknown; type?: unknown; content?: unknown };
+					if (streamEvent.partial && typeof streamEvent.partial === "object") text = textFromContent((streamEvent.partial as { content?: unknown }).content);
+					if (!text && streamEvent.type === "text_end" && typeof streamEvent.content === "string") text = streamEvent.content;
+				}
+				if (text && text !== returnedText) {
+					returnedText = text;
+					options.onUpdate?.(snapshot());
+				}
 				return;
 			}
 
@@ -176,7 +192,7 @@ export function runDelegateTask(
 
 			const failed = exitCode !== 0 || stopReason === "error" || stopReason === "aborted";
 			const normalizedExitCode = failed && exitCode === 0 ? 1 : exitCode;
-			const output = finalOutput || errorMessage || stderr.trim() || "(no output)";
+			const output = finalOutput || returnedText || errorMessage || stderr.trim() || "(no output)";
 			if (failed) {
 				let failureLine = "Delegate failed";
 				if (stopReason) failureLine += ` (${stopReason})`;
