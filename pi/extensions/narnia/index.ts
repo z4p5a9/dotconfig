@@ -1,12 +1,15 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Type, type Static } from "typebox";
 import { runDelegateTask, type DelegateDetails, type DelegateTaskInput, type DelegateTaskResult } from "./child-runner.ts";
+import { loadNarniaConfig } from "./config.ts";
 import { renderDelegateCall, renderDelegateResult } from "./render.ts";
 
 const CUSTOM_TYPE = "narnia";
-const BLOCK_REASON = "Narnia Mode: root session cannot call tools directly. Use one delegate call with tasks: { title: string; content: string }[]; batch currently-known independent work into multiple titled tasks.";
-const NARNIA_ROOT_PROMPT = "Narnia mode is enabled. Root session is a delegate-only orchestrator. Use only delegate for file, shell, web, edit, and test work. Use one delegate call containing multiple titled tasks for all currently-known independent work. Do not make multiple delegate calls in the same turn unless later work depends on earlier delegate results. Always look for work that can be parallelized before delegating. Each task object needs a concise title and full content. Delegate bounded tasks with enough context. Keep root context compact. Do not ask child agents to recursively delegate.";
+const BLOCK_REASON = "Narnia Mode: root session cannot call tools directly. Use one delegate call with tasks: { title: string; content: string; profile?: \"fast\" }[]; batch currently-known independent work into multiple titled tasks.";
+const NARNIA_ROOT_PROMPT = "Narnia mode is enabled. Root session is a delegate-only orchestrator. Use only delegate for file, shell, web, edit, and test work. Use one delegate call containing multiple titled tasks for all currently-known independent work. Do not make multiple delegate calls in the same turn unless later work depends on earlier delegate results. Always look for work that can be parallelized before delegating. Each task object needs a concise title and full content. Use profile: \"fast\" only for deterministic concise child tasks. Delegate bounded tasks with enough context. Keep root context compact. Do not ask child agents to recursively delegate.";
 const DELEGATE_OVERLAP_MESSAGE = "Delegate already has an active call. Combine all currently-known independent work into one delegate call with multiple titled tasks, or wait for prior delegate results before making dependent follow-up calls.";
+// Grounded locally via `pi --list-models`: authenticated openai-codex exposes gpt-5.5.
+const FAST_PROFILE_MODEL = { provider: "openai-codex", id: "gpt-5.5" };
 
 function narniaExtension(pi: ExtensionAPI): void {
 	if (process.env.PI_NARNIA_CHILD === "1") return;
@@ -15,7 +18,28 @@ function narniaExtension(pi: ExtensionAPI): void {
 	let previousActiveTools: string[] | undefined;
 	let delegateRegistered = false;
 	let activeDelegateCalls = 0;
+	const config = loadNarniaConfig();
 
+	const rootToolsForCurrentAvailability = () => {
+		const availableTools = new Set(pi.getAllTools().map((tool) => tool.name));
+		return ["delegate", ...config.rootTools.filter((name) => name !== "delegate" && availableTools.has(name))];
+	};
+	const childToolsForCurrentAvailability = () => {
+		const allTools = pi.getAllTools().map((tool) => tool.name);
+		const availableTools = new Set(allTools);
+		if (config.childTools === undefined) return Array.from(new Set(allTools.filter((name) => name !== "delegate")));
+		return config.childTools.filter((name) => availableTools.has(name));
+	};
+	const rootPromptFrom = (rootTools: string[]) => {
+		const extraTools = rootTools.filter((name) => name !== "delegate");
+		if (extraTools.length === 0) return NARNIA_ROOT_PROMPT;
+		return `Narnia mode is enabled. Root session is a constrained orchestrator. Root can call only delegate and configured root tools: ${extraTools.join(", ")}. Use delegate for all work outside those tools. Use one delegate call containing multiple titled tasks for all currently-known independent work. Do not make multiple delegate calls in the same turn unless later work depends on earlier delegate results. Always look for work that can be parallelized before delegating. Each task object needs a concise title and full content. Use profile: "fast" only for deterministic concise child tasks. Delegate bounded tasks with enough context. Keep root context compact. Do not ask child agents to recursively delegate.`;
+	};
+	const blockReasonFrom = (rootTools: string[]) => {
+		const extraTools = rootTools.filter((name) => name !== "delegate");
+		if (extraTools.length === 0) return BLOCK_REASON;
+		return `Narnia Mode: root session can call only delegate and configured root tools (${extraTools.join(", ")}). Use delegate for blocked tools; batch currently-known independent work into multiple titled tasks.`;
+	};
 	const allConfiguredExceptDelegate = () => pi.getAllTools().map((tool) => tool.name).filter((name) => name !== "delegate");
 	const currentActiveExceptDelegate = () => {
 		const activeTools = typeof pi.getActiveTools === "function" ? pi.getActiveTools() : allConfiguredExceptDelegate();
@@ -76,7 +100,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 
 		if (savedState?.enabled) {
 			ensureDelegateRegistered();
-			pi.setActiveTools(["delegate"]);
+			pi.setActiveTools(rootToolsForCurrentAvailability());
 		} else if (savedState) {
 			ensureDelegateRegistered();
 			pi.setActiveTools(previousActiveTools ?? allConfiguredExceptDelegate());
@@ -96,11 +120,12 @@ function narniaExtension(pi: ExtensionAPI): void {
 						{
 							title: Type.String({ description: "Required. 1-4 word task title.", minLength: 1 }),
 							content: Type.String({ description: "Required. Non-empty task content.", minLength: 1 }),
+							profile: Type.Optional(Type.Literal("fast", { description: "Optional. Use for deterministic concise child tasks; forces no thinking and the grounded fast model." })),
 						},
 						{ additionalProperties: false },
 					),
 					{
-						description: "Required. Array of { title: string; content: string } task objects. Batch currently-known independent work into one call. Titles must be concise, 1-4 words. Content must be complete and non-empty.",
+						description: "Required. Array of { title: string; content: string; profile?: \"fast\" } task objects. Batch currently-known independent work into one call. Titles must be concise, 1-4 words. Content must be complete and non-empty.",
 						minItems: 1,
 					},
 				),
@@ -111,12 +136,13 @@ function narniaExtension(pi: ExtensionAPI): void {
 		pi.registerTool({
 			name: "delegate",
 			label: "Delegate",
-			description: "Delegate bounded tasks to isolated child Pi processes. Batch currently-known independent work into one call with multiple tasks: { title: string; content: string }[].",
+			description: "Delegate bounded tasks to isolated child Pi processes. Batch currently-known independent work into one call with multiple tasks: { title: string; content: string; profile?: \"fast\" }[].",
 			promptSnippet: "Run bounded titled file, shell, web, edit, and test work outside the root session.",
 			promptGuidelines: [
 				"Use one delegate call with tasks: [{ title, content }] for all currently-known independent file, shell, web, edit, and test work while Narnia mode is enabled.",
 				"Do not make multiple delegate calls in the same turn unless later work depends on earlier delegate results.",
 				"Each task object must have a concise title and full task content.",
+				"Set profile: \"fast\" only for deterministic concise child tasks.",
 				"Do not ask delegate to recursively delegate.",
 			],
 			parameters: delegateParameters,
@@ -152,7 +178,7 @@ function narniaExtension(pi: ExtensionAPI): void {
 						break;
 					}
 
-					tasks.push({ title, content });
+					tasks.push(task.profile === "fast" ? { title, content, profile: "fast" } : { title, content });
 				}
 
 				if (validationError) {
@@ -176,13 +202,13 @@ function narniaExtension(pi: ExtensionAPI): void {
 
 				try {
 					emitUpdate();
-					const childTools = Array.from(new Set(pi.getAllTools().map((tool) => tool.name).filter((name) => name !== "delegate")));
+					const childTools = childToolsForCurrentAvailability();
 					await Promise.allSettled(tasks.map((task, index) =>
 						runDelegateTask(task, {
 							childTools,
 							cwd: ctx.cwd,
-							model: ctx.model,
-							thinkingLevel: pi.getThinkingLevel(),
+							model: task.profile === "fast" ? FAST_PROFILE_MODEL : ctx.model,
+							thinkingLevel: task.profile === "fast" ? "off" : pi.getThinkingLevel(),
 							projectTrusted: ctx.isProjectTrusted(),
 							signal,
 							onUpdate: (result) => {
@@ -235,10 +261,11 @@ function narniaExtension(pi: ExtensionAPI): void {
 				if (!enabled) previousActiveTools = currentActiveExceptDelegate();
 				ensureDelegateRegistered();
 				enabled = true;
+				const rootTools = rootToolsForCurrentAvailability();
 				pi.appendEntry(CUSTOM_TYPE, { enabled: true, previousActiveTools });
-				pi.setActiveTools(["delegate"]);
+				pi.setActiveTools(rootTools);
 				updateStatus(ctx);
-				ctx.ui.notify("Narnia enabled. Root tools restricted to delegate; paste/! output can still pollute root context.", "warning");
+				ctx.ui.notify(`Narnia enabled. Root tools restricted to ${rootTools.join(", ")}; paste/! output can still pollute root context.`, "warning");
 				return;
 			}
 
@@ -277,12 +304,15 @@ function narniaExtension(pi: ExtensionAPI): void {
 	pi.on("before_agent_start", (event, ctx) => {
 		updateStatus(ctx);
 		if (!enabled) return undefined;
-		return { systemPrompt: `${event.systemPrompt}\n\n${NARNIA_ROOT_PROMPT}` };
+		const rootTools = rootToolsForCurrentAvailability();
+		return { systemPrompt: `${event.systemPrompt}\n\n${rootPromptFrom(rootTools)}` };
 	});
 
 	pi.on("tool_call", (event) => {
-		if (!enabled || event.toolName === "delegate") return undefined;
-		return { block: true, reason: BLOCK_REASON };
+		if (!enabled) return undefined;
+		const rootTools = rootToolsForCurrentAvailability();
+		if (rootTools.includes(event.toolName)) return undefined;
+		return { block: true, reason: blockReasonFrom(rootTools) };
 	});
 
 	pi.on("session_shutdown", (_event, ctx) => {

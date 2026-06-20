@@ -1,14 +1,37 @@
 import { EventEmitter } from "node:events";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { spawnMock } = vi.hoisted(() => ({
+const { spawnMock, configFile } = vi.hoisted(() => ({
 	spawnMock: vi.fn(),
+	configFile: { text: undefined as string | undefined },
 }));
 
 vi.mock("node:child_process", () => ({
 	spawn: spawnMock,
 }));
 
+vi.mock("node:fs", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs")>();
+	const isNarniaConfig = (filePath: unknown) => String(filePath).endsWith("extensions/narnia.json") || String(filePath).endsWith("extensions\\narnia.json");
+
+	return {
+		...actual,
+		existsSync: (filePath: unknown) => isNarniaConfig(filePath) ? configFile.text !== undefined : actual.existsSync(filePath as any),
+		readFileSync: (filePath: unknown, options?: unknown) => {
+			if (isNarniaConfig(filePath)) {
+				if (configFile.text === undefined) {
+					const error = new Error("ENOENT: no such file or directory");
+					(error as { code?: string }).code = "ENOENT";
+					throw error;
+				}
+				return configFile.text;
+			}
+			return (actual.readFileSync as any)(filePath, options);
+		},
+	};
+});
+
+import { getNarniaConfigPath } from "../config.ts";
 import narniaExtension from "../index.ts";
 
 const originalChildEnv = process.env.PI_NARNIA_CHILD;
@@ -103,10 +126,12 @@ function queueChild(events: unknown[], code: number, stderr = "") {
 
 beforeEach(() => {
 	spawnMock.mockReset();
+	configFile.text = undefined;
 	delete process.env.PI_NARNIA_CHILD;
 });
 
 afterEach(() => {
+	configFile.text = undefined;
 	delete process.env.PI_NARNIA_CHILD;
 });
 
@@ -126,7 +151,11 @@ describe("narnia extension", () => {
 		expect(harness.pi.on).not.toHaveBeenCalled();
 	});
 
-	it("toggles /narnia on and off and restores prior tools", async () => {
+	it("uses Pi agent extension config path", () => {
+		expect(getNarniaConfigPath()).toBe("/tmp/pi-agent/extensions/narnia.json");
+	});
+
+	it("missing config keeps root delegate-only and restores prior tools", async () => {
 		const harness = createHarness([], ["read"]);
 
 		await harness.commands.narnia.handler("on", harness.ctx);
@@ -156,6 +185,23 @@ describe("narnia extension", () => {
 		expect(harness.activeTools.at(-1)).toEqual(["bash"]);
 	});
 
+	it("keeps configured root tools and gates with the same allowed set", async () => {
+		configFile.text = JSON.stringify({ root: { tools: [" read ", "", "read", "missing"] } });
+		const harness = createHarness([], ["bash"]);
+
+		await harness.commands.narnia.handler("on", harness.ctx);
+		expect(harness.activeTools.at(-1)).toEqual(["delegate", "read"]);
+		expect(harness.events.tool_call[0]({ toolName: "read" })).toBeUndefined();
+		expect(harness.events.tool_call[0]({ toolName: "bash" })).toEqual({
+			block: true,
+			reason: expect.stringContaining("configured root tools (read)"),
+		});
+
+		const restored = createHarness([{ type: "custom", customType: "narnia", data: { enabled: true, previousActiveTools: ["bash"] } }], ["bash"]);
+		restored.events.session_start[0]({}, restored.ctx);
+		expect(restored.activeTools.at(-1)).toEqual(["delegate", "read"]);
+	});
+
 	it("adds root prompt and gates tools while enabled", async () => {
 		const harness = createHarness();
 
@@ -179,6 +225,10 @@ describe("narnia extension", () => {
 		await harness.commands.narnia.handler("on", harness.ctx);
 		const delegate = harness.delegate();
 
+		const taskSchema = delegate.parameters.properties.tasks.items;
+		expect(taskSchema.properties.profile).toMatchObject({ const: "fast", optional: true });
+		expect(taskSchema.options).toMatchObject({ additionalProperties: false });
+
 		await expect(delegate.execute("call", { tasks: [{ title: "   ", content: "x" }] }, undefined, undefined, harness.ctx)).resolves.toMatchObject({
 			content: [{ type: "text", text: "Delegate task 1 title is empty." }],
 			details: { exitCode: 1, tasks: [] },
@@ -194,7 +244,93 @@ describe("narnia extension", () => {
 		expect(spawnMock).not.toHaveBeenCalled();
 	});
 
-	it("fans out child tasks and aggregates success and failure", async () => {
+	it("runs fast profile with off thinking and grounded fast model", async () => {
+		const harness = createHarness();
+		await harness.commands.narnia.handler("on", harness.ctx);
+		const delegate = harness.delegate();
+
+		queueChild([
+			{
+				type: "message_end",
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text: childOutput("ok") }],
+					stopReason: "stop",
+				},
+			},
+		], 0);
+
+		const result = await delegate.execute("call", { tasks: [{ title: "Fast", content: "do exactly", profile: "fast" }] }, undefined, undefined, harness.ctx);
+
+		const firstSpawnArgs = spawnMock.mock.calls[0][1].slice(spawnMock.mock.calls[0][1].indexOf("--mode"));
+		expect(firstSpawnArgs[firstSpawnArgs.indexOf("--append-system-prompt") + 1]).toContain("Fast profile: deterministic concise execution");
+		expect(firstSpawnArgs[firstSpawnArgs.indexOf("--model") + 1]).toBe("openai-codex/gpt-5.5");
+		expect(firstSpawnArgs[firstSpawnArgs.indexOf("--thinking") + 1]).toBe("off");
+		expect(result.details.exitCode).toBe(0);
+		expect(harness.pi.getThinkingLevel).not.toHaveBeenCalled();
+	});
+
+	it("passes configured child tools to spawn and removes delegate", async () => {
+		configFile.text = JSON.stringify({ children: { tools: ["delegate", " bash ", "read", "missing", "bash", ""] } });
+		const harness = createHarness();
+		await harness.commands.narnia.handler("on", harness.ctx);
+		const delegate = harness.delegate();
+
+		queueChild([
+			{
+				type: "message_end",
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text: childOutput("ok") }],
+					stopReason: "stop",
+				},
+			},
+		], 0);
+
+		await delegate.execute("call", { tasks: [{ title: "Child", content: "use configured tools" }] }, undefined, undefined, harness.ctx);
+
+		const firstSpawnArgs = spawnMock.mock.calls[0][1].slice(spawnMock.mock.calls[0][1].indexOf("--mode"));
+		expect(firstSpawnArgs).toContain("--tools");
+		expect(firstSpawnArgs[firstSpawnArgs.indexOf("--tools") + 1]).toBe("bash,read");
+	});
+
+	it("empty child tools use no-tools", async () => {
+		configFile.text = JSON.stringify({ children: { tools: [] } });
+		const harness = createHarness();
+		await harness.commands.narnia.handler("on", harness.ctx);
+		const delegate = harness.delegate();
+
+		queueChild([
+			{
+				type: "message_end",
+				message: {
+					role: "assistant",
+					content: [{ type: "text", text: childOutput("ok") }],
+					stopReason: "stop",
+				},
+			},
+		], 0);
+
+		await delegate.execute("call", { tasks: [{ title: "No tools", content: "run without tools" }] }, undefined, undefined, harness.ctx);
+
+		const firstSpawnArgs = spawnMock.mock.calls[0][1].slice(spawnMock.mock.calls[0][1].indexOf("--mode"));
+		expect(firstSpawnArgs).toContain("--no-tools");
+		expect(firstSpawnArgs).not.toContain("--tools");
+	});
+
+	it("invalid config fails fast", () => {
+		configFile.text = JSON.stringify({ root: { tools: "read" }, children: { tools: ["read"] } });
+
+		expect(() => createHarness()).toThrow("[narnia] invalid config at /tmp/pi-agent/extensions/narnia.json: root.tools must be an array of strings");
+	});
+
+	it("malformed config JSON fails fast", () => {
+		configFile.text = "{";
+
+		expect(() => createHarness()).toThrow("[narnia] invalid config at /tmp/pi-agent/extensions/narnia.json: malformed JSON");
+	});
+
+	it("fans out child tasks and aggregates success and failure with missing config child defaults", async () => {
 		const harness = createHarness();
 		await harness.commands.narnia.handler("on", harness.ctx);
 		const delegate = harness.delegate();

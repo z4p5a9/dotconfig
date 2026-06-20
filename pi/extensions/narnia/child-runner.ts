@@ -5,6 +5,7 @@ import * as path from "node:path";
 export type DelegateTaskInput = {
 	title: string;
 	content: string;
+	profile?: "fast";
 };
 
 export type DelegateTaskResult = {
@@ -21,6 +22,7 @@ export type DelegateDetails = {
 };
 
 const CHILD_BOOTSTRAP = "Follow the delegated task exactly. Do not delegate further. Return only what the parent needs.";
+const FAST_PROFILE_PROMPT = "Fast profile: deterministic concise execution. Do exactly requested; no exploration; return only relevant result.";
 
 export function runDelegateTask(
 	task: DelegateTaskInput,
@@ -53,7 +55,7 @@ export function runDelegateTask(
 		if (options.childTools.length > 0) args.push("--tools", options.childTools.join(","));
 		else args.push("--no-tools");
 
-		args.push("--append-system-prompt", CHILD_BOOTSTRAP);
+		args.push("--append-system-prompt", task.profile === "fast" ? `${CHILD_BOOTSTRAP}\n\n${FAST_PROFILE_PROMPT}` : CHILD_BOOTSTRAP);
 		if (options.model) args.push("--model", `${options.model.provider}/${options.model.id}`);
 		args.push("--thinking", options.thinkingLevel);
 		args.push(options.projectTrusted ? "--approve" : "--no-approve");
