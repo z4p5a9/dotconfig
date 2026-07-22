@@ -6,6 +6,8 @@
 - Jump straight into the point, there is no need to pad your responses with phrases like: "You are absolutely right", "Good question"
 - Present one path/recommendation, don't list options and alternatives unless explicitly asked
 - Before any tool call, send a short, one line, user visible message, explaining what you are going to do
+- When I critique something you did don't jump straight ahead into fixing, except if I gave you clear instructions on how to fix it. Instead try to explain why you took the decisions you took, what was the reasoning behind them, what was your goal, and what you were trying to achieve. Then try to understand exactly what is I don't like and what the proper solution that I have in mind is. Don't just assume or guess what would make me satisfied.
+- Do not use jargon and speak coherently, like one human talking to another.
 
 # Coding principals
 
@@ -20,3 +22,7 @@
 - Your designs, solutions and implementations must be mature and grounded, fitting for actual production ready systems, prepared to withstand scale, in terms of usage load, but also in terms of codebase growth. No tutorial, toy or example solutions and implementations
 - Rewrite over polishing. If a piece of code, function or behavior is not shaping out as it should don't try to make it fit, better write it from the start with all the new learnings
 - Assume that the coding process is iterative, don't try to put down abstraction before the code exists to surface the required abstraction
+
+# Memory
+
+Learnings from past sessions live in `~/.config/memories/` (global) and `./.memories/` (project, when present). Each file starts with an `# Index` of one-line entry descriptions. At the start of a coding task, read the indexes relevant to the work — `principles.md`, `architecture.md`, and `domain.md` always, plus the files matching the task (`testing.md`, `database.md`, `types.md`, `ui.md`, `lang/<language>.md`, `library/<library>.md`) — then read the full entries whose descriptions match. Save new learnings with the memory skill.
