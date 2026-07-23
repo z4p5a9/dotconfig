@@ -35,7 +35,7 @@ Most specific file wins: a TypeScript-only typing preference goes to `lang/types
 1. Distill the learning. Grep both stores for an existing entry covering it — when one exists, propose an edit to that entry instead of a new one. And note: getting corrected on something an entry already covers means that memory failed to fire — its description didn't match the situation, or its body didn't land. Rework it against the miss: sharpen the description so the index line matches situations like this one, and restate the body so it would have prevented the mistake.
 2. Propose it, exactly in this shape:
 
-    > **Slug**: name-slug
+    > **Slug**: named like a lint rule — a short kebab-case prescription of the behavior the memory enforces, readable on its own (ESLint/Credo style): `validate-at-boundaries`, `inline-types-at-use-site`, `prefer-rewrite-over-polish`. A topic label (`validation-handling`, `typescript-style`) is not a slug.
     > **Kind**: global/principles, project/database, global/lang/elixir, …
     > **Description**: one sentence — what this is / when it applies
     > **Triggers**: optional — 3–6 concrete tokens the agent will literally face when this memory applies: function/module/API names, error messages, task phrasings. Skip when the description alone matches.
