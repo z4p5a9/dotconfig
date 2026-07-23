@@ -3,7 +3,11 @@ name: memory
 description: Distill corrections and preferences from the conversation into persistent memory files so learnings carry over to future sessions. Use when the user corrects your code or approach, refactors your output, explains why something was wrong, gives guidance on coding style, principles, patterns, architecture, testing, or best practices, corrects domain terminology or naming, or says "remember this".
 ---
 
-Distill what the user taught you into a **learning**: the general rule behind the specific correction. A learning is never about a file, line, or this task's code — it is the preference the user would have stated up front if asked. From "move this validation up to the endpoint" distill "validate at the outermost layer, where side-effects happen".
+Distill what the user taught you into a **learning**: the standing convention that surfaced through the correction. The conversation is only the episode — no residue of it survives into the memory:
+
+- Write in timeless present, as how things are done — "validation lives at the outermost layer, where side-effects happen" — never as a transformation of existing code ("move/replace/change X to Y"). The memory must read the same whether authoring new code or refactoring old code.
+- Swap the feature, module, or (for global) project where the learning surfaced: memory, description, and triggers must read unchanged. Names from the current code belong only in `domain.md` memories.
+- Triggers are tokens that recur wherever the convention applies — library APIs, patterns, task phrasings — never identifiers from the current diff.
 
 Write every memory as a positive convention: state the behavior to reproduce, not the mistake to avoid — a prohibition puts the bad pattern in context and gives no target. From "stop creating helpers everywhere" distill "write logic inline at its call site; extract only at a named domain boundary". When a hard guardrail can't be phrased positively, keep the prohibition but pair it with what to do instead.
 
