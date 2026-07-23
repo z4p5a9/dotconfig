@@ -5,6 +5,8 @@ description: Distill corrections and preferences from the conversation into pers
 
 Distill what the user taught you into a **learning**: the general rule behind the specific correction. A learning is never about a file, line, or this task's code — it is the preference the user would have stated up front if asked. From "move this validation up to the endpoint" distill "validate at the outermost layer, where side-effects happen".
 
+Write every memory as a positive convention: state the behavior to reproduce, not the mistake to avoid — a prohibition puts the bad pattern in context and gives no target. From "stop creating helpers everywhere" distill "write logic inline at its call site; extract only at a named domain boundary". When a hard guardrail can't be phrased positively, keep the prohibition but pair it with what to do instead.
+
 ## Stores
 
 - Global: `~/.config/memories/` — the learning holds in any codebase
@@ -32,6 +34,7 @@ Most specific file wins: a TypeScript-only typing preference goes to `lang/types
     > **Slug**: name-slug
     > **Kind**: global/principles, project/database, global/lang/elixir, …
     > **Description**: one sentence — what this is / when it applies
+    > **Triggers**: optional — 3–6 concrete tokens the agent will literally face when this memory applies: function/module/API names, error messages, task phrasings. Skip when the description alone matches.
     >
     > {The memory}
 
@@ -49,7 +52,7 @@ Every memory file:
 ```markdown
 # Index
 
-- **name-slug** - short one sentence description of what-is-this/when-to-use
+- **name-slug** - short one sentence description of what-is-this/when-to-use [triggers: useEffect, subscription, cleanup]
 
 # Memories
 

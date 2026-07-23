@@ -25,4 +25,4 @@
 
 # Memory
 
-Learnings from past sessions live in `~/.config/memories/` (global) and `./.memories/` (project, when present). Each file starts with an `# Index` of one-line entry descriptions. At the start of a coding task, read the indexes relevant to the work — `principles.md`, `architecture.md`, and `domain.md` always, plus the files matching the task (`testing.md`, `database.md`, `types.md`, `ui.md`, `lang/<language>.md`, `library/<library>.md`) — then read the full entries whose descriptions match. Save new learnings with the memory skill.
+Learnings from past sessions live in `~/.config/memories/` (global) and `./.memories/` (project, when present). Each file starts with an `# Index` of one-line entry descriptions. At the start of a coding task, read the indexes relevant to the work — `principles.md`, `architecture.md`, and `domain.md` always, plus the files matching the task (`testing.md`, `database.md`, `types.md`, `ui.md`, `lang/<language>.md`, `library/<library>.md`) — then read the full entries whose descriptions match, or whose trigger tokens appear in the task or the code at hand. Save new learnings with the memory skill.
