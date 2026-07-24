@@ -24,11 +24,13 @@ Files inside either store:
 - `database.md` — schema modelling, queries, migrations
 - `types.md` — type and schema modelling
 - `ui.md` — components, styling, UI state
-- `domain.md` — domain terms, domain language, domain concepts and how they relate; almost always project, not global
+- `domain.md` — the project's domain language (see below); almost always project, not global
 - `lang/<language>.md` — language-specific (e.g. `lang/typescript.md`, `lang/elixir.md`)
 - `library/<library>.md` — library/framework-specific (e.g. `library/react.md`, `library/effect.md`)
 
 Most specific file wins: a TypeScript-only typing preference goes to `lang/typescript.md`, not `types.md`. The seven top-level files are a fixed set — create `lang/` and `library/` files on demand, never new top-level files.
+
+`domain.md` holds language, not conventions: each entry defines a term of the domain — what it means, what it is *not* (the distinction from its nearest neighbour), how it relates to other terms, its canonical spelling in code (modules, tables, API types), and any rule inherent to the term's meaning ("an issued invoice is immutable"). How such a rule is implemented still belongs in `database.md`/`architecture.md`. For domain entries the slug is the term itself (`member`, `billing-period`), the description is its one-line definition, and the triggers list the wrong synonyms alongside the right term (`user`, `account` on the `member` entry) so that reaching for the wrong word pulls the correction in.
 
 ## Flow
 
