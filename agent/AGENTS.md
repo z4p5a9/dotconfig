@@ -52,3 +52,9 @@ Write each paragraph as a single line and let the editor or renderer wrap it. Th
 - Inline comments should be scarce and used to explain the why when it cannot be encoded into the code itself. If an inline comments is needed every dozen of lines of code this is an indication that the code is not as self describing as it should be and the solution is not more inline comments
 - Do not use comments as section banners
 - A comments should be self-contained, it should not reference or point to documents, or other material
+
+---
+
+## .AGENTS.md
+
+If an `.AGENTS.md` exists at the root of your cwd, always read it as part of your AGENTS.md/CLAUDE.md. It's a local untracked file, that contains agent instructions that should not be committed with the project.
