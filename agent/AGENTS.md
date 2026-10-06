@@ -58,7 +58,11 @@ Measure twice, cut once. Understand the problem fully before building, because c
 
 ## Picking a model
 
-Delegate all work to other agents through T3's `delegate_task`, subagents included. Outside T3 Code, use the harness's own subagent tool. Pick the model by what the work demands most. Scores run 1 to 4, higher is better.
+This section applies when running in T3 Code. When you need to spawn or run a subagent, use T3's `delegate_task` instead of the harness's native subagent tools. This lets you choose the provider and model listed below.
+
+Only the main thread may spawn subagents. Subagents must do their assigned work themselves and must not spawn agents, delegate tasks, or launch threads. Include this restriction in every subagent task prompt.
+
+Pick the model by what the work demands most. Scores run 1 to 4, higher is better.
 
 | | Claude Opus 5.5 | Claude Sonnet 5.5 | GPT 6.1 Sol |
 |---|---|---|---|
