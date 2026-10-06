@@ -56,15 +56,23 @@ Propose bold ideas, even ones that sound insane, when they meaningfully benefit 
 
 Measure twice, cut once. Understand the problem fully before building, because cleverness is what gets written when you haven't. The biggest simplicity win is refusing to solve problems we don't have. Good code is the most simple thing that delivers full functionality and performance, nothing traded away, nothing bolted on. Push back when you see a more obvious way.
 
-## Picking a model
+## Subagents
 
-This section applies when running in T3 Code. When you need to spawn or run a subagent, use T3's `delegate_task` instead of the harness's native subagent tools. This lets you choose the provider and model listed below.
+This section applies in T3 Code. Spawn every subagent with T3's `delegate_task`, because the native subagent tools can't pick the provider and model.
 
-Only the main thread may spawn subagents. Subagents must do their assigned work themselves and must not spawn agents, delegate tasks, or launch threads. Include this restriction in every subagent task prompt.
+Only the main thread spawns subagents. A subagent does its assigned work itself and never spawns agents, delegates tasks, or launches threads. Put this restriction in every task prompt.
 
-Pick the model by what the work demands most. Scores run 1 to 4, higher is better.
+Every subagent runs on one of three models, exactly as named below. `orchestrator_capabilities` lists many more, newer looking ones included. Read it only for option IDs. If none of the three fits the work, ask me.
 
-| | Claude Opus 5.5 | Claude Sonnet 5.5 | GPT 6.1 Sol |
+Opus, `claudeAgent` / `claude-opus-5-5`, decides and builds what ships. It owns UI, API design, architecture, high level decisions, and production code that gets merged and deployed.
+
+Sol, `codex` / `gpt-6.1-sol`, challenges and digs. It reviews and advises, plays devil's advocate against a direction or plan, and takes an idea one level deeper to surface what we missed. It runs thorough research whose findings go back to Opus to judge. It writes throwaway code that nobody merges or reads, such as a script that tries something out. It drives a computer well, which makes it the model for QA.
+
+Sonnet, `claudeAgent` / `claude-sonnet-5-5`, executes. It runs audits and codebase recon. It writes code from a spec so complete that it makes no decisions of its own, such as one step of an approved plan, as a faster and cheaper hand under an Opus orchestrator.
+
+When the work fits no role, pick by what it demands most. Scores run 1 to 4, higher is better.
+
+| | Opus | Sonnet | Sol |
 |---|---|---|---|
 | taste, API and product sense | 4 | 2 | 1 |
 | ui, good looking usable interfaces | 4 | 2 | 1 |
@@ -74,16 +82,25 @@ Pick the model by what the work demands most. Scores run 1 to 4, higher is bette
 | speed, wall clock time to a finished task | 3 | 3 | 4 |
 | cost, per finished task rather than per token | 1 | 2 | 4 |
 
-Opus 5.5 decides and builds what ships. It owns UI, API design, architecture, high level decisions, and production code that gets merged and deployed.
+Spawn with these settings. Reasoning is `high` for most work and `xhigh` for the hard parts.
 
-GPT 6.1 Sol challenges and digs. It reviews and advises, plays devil's advocate against a direction, plan, or idea, and takes one deeper to surface what we missed. It runs thorough research and studies whose findings go back to Opus to judge. It writes throwaway code that nobody merges or reads, such as a script that tries something out. It drives a computer well, which makes it the model for QA.
+```ts
+delegate_task({
+  task, // ends with the no-spawn restriction
+  runtimeMode: "full-access",
+  target: {
+    providerInstanceId: "claudeAgent",
+    model: "claude-sonnet-5-5",
+    options: { effort: "high", contextWindow: "1m" },
+  },
+})
 
-Sonnet 5.5 executes. It runs reviews, audits, and codebase recon. It writes code from a spec so complete that it makes no decisions of its own, such as one step of an approved plan, as a faster and cheaper hand under an Opus orchestrator.
+// Sol has no context option and names reasoning differently.
+target: { providerInstanceId: "codex", model: "gpt-6.1-sol", options: { reasoningEffort: "high" } }
+```
 
-- Use only `claudeAgent` / `claude-opus-5-5`, `claudeAgent` / `claude-sonnet-5-5`, and `codex` / `gpt-6.1-sol`, exactly as named, even when a newer looking version shows up.
-- Set reasoning on every child, since the defaults are lower. `high` for most work, `xhigh` for the hard parts. Claude calls it `effort`, Codex calls it `reasoningEffort`.
-- A review runs on a different model than the one that did the work. Codex to review Claude's work, and Claude to review Codex's work.
-- Only I change the model. A flagged prompt gets rewritten and retried on the same model. A passing failure gets a wait and a retry. If it still can't run, stop and tell me.
+- A review runs on the other provider, so a model with different training looks at the same work. Sol reviews Opus and Sonnet work. Opus or Sonnet reviews Sol's work, picked by what the review demands most in the table.
+- Only I change the model. A flagged prompt gets rewritten and retried on the same model. A transient failure gets a wait and a retry. If it still can't run, stop and tell me.
 
 ## .AGENTS.md
 
