@@ -82,7 +82,7 @@ Sonnet 5.5 executes. It runs reviews, audits, and codebase recon. It writes code
 
 - Use only `claudeAgent` / `claude-opus-5-5`, `claudeAgent` / `claude-sonnet-5-5`, and `codex` / `gpt-6.1-sol`, exactly as named, even when a newer looking version shows up.
 - Set reasoning on every child, since the defaults are lower. `high` for most work, `xhigh` for the hard parts. Claude calls it `effort`, Codex calls it `reasoningEffort`.
-- A review runs on a different model than the one that did the work.
+- A review runs on a different model than the one that did the work. Codex to review Claude's work, and Claude to review Codex's work.
 - Only I change the model. A flagged prompt gets rewritten and retried on the same model. A passing failure gets a wait and a retry. If it still can't run, stop and tell me.
 
 ## .AGENTS.md
