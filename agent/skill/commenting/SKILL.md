@@ -21,10 +21,6 @@ Done when every comment you plan to write names the fact it carries.
 
 Present tense, third person, literal and technical. The reader is a junior dev on their first day. A comment states a fact. It does not persuade, hedge, apologise, joke, or address the reader.
 
-One idea per sentence, in active voice with the actor named, "the loader parses the file" over "the file is parsed". The plain word wins over the fancy one, "use" over "utilize", "if" over "in the event that". It also wins over a term when both say the same thing, "compared byte by byte" over "memcmp order". A term stays only when the plain words would be less precise. A strong verb replaces a weak verb propped up by an adverb.
-
-Periods separate sentences and commas separate clauses. Em dashes, semicolons, parentheses, and colons used as connectors stay out. Quotes are straight.
-
 ### Self-contained
 
 A comment is complete on its own. It calls things by the names a reader would search for and carries its own reason rather than pointing at another comment or a document elsewhere.
@@ -89,6 +85,8 @@ Configuration for an outbound request.
 An inline comment is read with the file open, by whoever is changing the code next to it. It carries one reason the code cannot show, on the line or block it protects. The invariant being kept, the ordering that must hold, why a constant has its value, the platform quirk a branch works around.
 
 Code whose reasons are visible reads bare. A comment that names the section below it, or narrates what the next line does, gets deleted.
+
+Inline comments are scarce. Needing one every dozen lines means the code hides its reasons, and the fix is clearer names and structure.
 
 ```
 // The payment provider blocks the card after three failed charges in a row.
