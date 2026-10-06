@@ -18,13 +18,15 @@ export * as Committer from "./Committer.ts";
 
 ## Imports
 
-A consumer outside the directory imports the namespaces it needs from the directory and addresses members through them. The class is `Head.Head`, its layer `Head.layer`, an error `Errors.DecodeError`.
+A consumer outside the directory imports the namespaces it needs from the barrel, through the package's subpath alias when it has one, and addresses members through them. The class is `Head.Head`, its layer `Head.layer`, an error `Errors.DecodeError`. Here the alias is `#src`.
 
 ```ts
-import { Committer, Head } from "../log";
+import { Committer, Head } from "#src/log/index";
 
 const committer = yield* Committer.Committer;
 const layer = Committer.layerNoDeps.pipe(Layer.provide(Head.layer));
 ```
+
+With Node's subpath patterns, the mapping in `package.json` carries the extension, `"imports": { "#src/*": "./src/*.ts" }`, because `rewriteRelativeImportExtensions` rewrites `.ts` on relative paths only and rejects it on any other path. That is also why the barrel file is named in the path.
 
 A file inside the directory imports its siblings relatively and as namespaces, `import * as Head from "./Head.ts"`, never through its own barrel. A test imports the module under test the same way. A barrel is therefore never on the import path of its own files, which is what keeps it out of cycles. Two directories that import each other's barrels still cycle, and the fix is to move the shared concept into a directory both import.

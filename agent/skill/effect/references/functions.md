@@ -12,13 +12,9 @@ Three forms, by what they record:
 - `Effect.fn(function* (args) { ... })` captures stack frames without a span. Use it for internal functions that should still show in a stack trace.
 - `Effect.fnUntraced(function* (args) { ... })` records nothing. Use it for internal helpers and hot paths.
 
-The span name is the module name and the function's own name, as in `const advance = Effect.fn("Head.advance")(...)` in `Head.ts`. In a kebab-case file it is the function's own name.
-
 ## Transforms
 
 Arguments after the generator function are transforms. Each receives the effect built so far and the original arguments, `(effect, ...args)`, and returns the next effect. Anything that applies to the whole call goes there and the body stays plain: translating errors, recovering locally, annotating logs, retrying, timing out, taking a permit, running uninterruptibly, ensuring cleanup, mapping the result.
-
-Pass a transform directly when it already fits, like `Effect.uninterruptible` or `semaphore.withPermits(1)`. Write `(effect, id) => effect.pipe(...)` only when the transform needs the original arguments.
 
 Order transforms from the operation's own error handling outward to how it runs, so `catchTag` comes before `withPermits`, which comes before `uninterruptible`. One or two transforms is the normal case.
 
@@ -42,16 +38,12 @@ const cancel = Effect.fn("Job.cancel")(
 
 ## Getting values out of effects
 
-Take the value with `yield*` on its own line and work on it in plain code. `.pipe` on an effect is for changing how that effect runs or fails: retrying, timing out, catching, providing. Chaining `Effect.map` or `Effect.flatMap` to transform a value inside a generator is the same work in a harder spelling, and so is a `yield*` nested inside a call.
+Take the value with `yield*` on its own line and work on it in plain code. `.pipe` on an effect is for changing how that effect runs or fails: retrying, timing out, catching, providing.
 
 ```ts
 const entries = yield* read(cursor);
-const names = entries.map(shape);
+const names = entries.map(toName);
 ```
-
-## Exiting without a value
-
-A branch that exits without a value ends `return yield* Effect.void`.
 
 ## Nesting Effect.gen
 

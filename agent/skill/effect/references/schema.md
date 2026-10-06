@@ -4,11 +4,11 @@ Use this when modeling data, wire or storage shapes, brands, variants, optional 
 
 ## Records
 
-A record is a `Schema.Struct` with a type alias of the same name taken from the schema.
+A record is a `Schema.Struct`.
 
 ```ts
 export const User = Schema.Struct({
-  id: UserId,
+  userId: UserId,
   name: Schema.NonEmptyString,
   email: Schema.optionalKey(Schema.String),
 });
@@ -16,7 +16,7 @@ export const User = Schema.Struct({
 export type User = typeof User.Type;
 ```
 
-Data models are structural schemas. `Schema.Class` and `Schema.TaggedClass` are not used for them. Numbers are `Schema.Finite`, since `Schema.Number` admits `NaN` and the infinities. Add `.annotate({ identifier: "User" })` only when tooling consumes it, such as JSON Schema, OpenAPI, or codegen.
+Add `.annotate({ identifier: "User" })` only when tooling consumes it, such as JSON Schema, OpenAPI, or codegen.
 
 Construct a value with `User.makeEffect(input)` when the input may fail its checks, so the failure stays in the error channel. `User.make(input)` throws on failure and is for trusted input.
 
@@ -52,11 +52,9 @@ A domain value is not made optional to make construction easier. Optionality is 
 
 Every entity identifier is a branded schema, and so is a unit whose raw values could be mixed up, such as milliseconds or cents, and a string or number with a rule of its own, such as an email address or a slug. Display text, counters, and indexes stay primitives until they gain an invariant.
 
-The checks come first and the brand last, so the brand names the checked value.
-
 ```ts
 export const Principal = Schema.String.check(Schema.isNonEmpty(), Schema.isMaxLength(200)).pipe(
-  Schema.brand("Principal"),
+  Schema.brand("@app/Principal"),
 );
 
 export type Principal = typeof Principal.Type;
@@ -101,7 +99,9 @@ const label = Event.match(event, {
 
 A single variant on its own is `Schema.TaggedStruct("Started", { runId: RunId })`.
 
-The discriminator of a contract we own is `_tag`. When a contract needs a custom key, the key names what it discriminates, `kind` by default or a domain word, and never `type`. Each member declares it with `Schema.tag`, as in `Schema.Struct({ kind: Schema.tag("started"), ... })`, and `Schema.toTaggedUnion("kind")` builds the union helpers over them. An external contract keeps whatever key it has. When the encoded form omits the discriminator entirely, `Schema.tagDefaultOmit` fills it on decode and drops it on encode.
+A member used by one union is written inside it. It gets a name and an export only when something else references it.
+
+The discriminator of a contract we own is `_tag`. When a contract needs a custom key, the key names what it discriminates, `kind` by default or a domain word. Each member declares it with `Schema.tag`, as in `Schema.Struct({ kind: Schema.tag("started"), ... })`, and `Schema.toTaggedUnion("kind")` builds the union helpers over them. An external contract keeps whatever key it has. When the encoded form omits the discriminator entirely, `Schema.tagDefaultOmit` fills it on decode and drops it on encode.
 
 ## Decoding and encoding
 

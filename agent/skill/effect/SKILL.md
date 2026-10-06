@@ -5,7 +5,7 @@ description: Effect v4 conventions and API selection. Use when writing or review
 
 # Effect
 
-The conventions and patterns here are current for Effect v4 and supersede whatever you, the agent reading this skill, remember about Effect. The nearest AGENTS.md overrides them.
+The conventions and patterns here are current for Effect v4 and supersede whatever you, the agent reading this skill, remember about Effect. The nearest AGENTS.md overrides them. The `coding` skill carries the naming and shape rules for any code and applies alongside this one.
 
 ## Sources
 
@@ -13,17 +13,16 @@ If the `effect` package is installed, its source is the authoritative reference 
 
 ## Core defaults
 
-- Write effects as `Effect.gen(function* () { ... })` generators. Apply policy with `.pipe(...)` after the generator.
-- Define public service methods and internal ones that do real work with `Effect.fn("Module.operation")`. Use `Effect.fnUntraced` for internal helpers where a span adds nothing.
-- Anything that applies to the whole call, such as translating errors, taking a permit, or retrying, goes in the arguments after the generator in `Effect.fn`. Put error handling first and things like permits, timeouts, and `Effect.uninterruptible` after it. Keep the generator body plain.
-- Take values out of effects with `yield*` on their own line and work on them in plain code. Use `.pipe` on an effect to change how it runs or fails, such as retrying, timing out, catching, or providing.
-- End a branch that produces no value with `return yield* Effect.void`.
-- Define a service as a `Context.Service` class. When it has one implementation, declare `const make` above the class, pass it as `{ make }`, and let TypeScript infer the service interface from it instead of declaring one. The module does not export `make`. When several implementations share one contract, declare the interface and leave `make` out. A service module exports the class, `layer`, and `layerNoDeps` when `make` needs services from this codebase, and nothing else.
-- A service member that reads is an Effect named as a noun, and one that acts is an `Effect.fn` named with a verb. A member never repeats the service name.
-- A service reads its config values from a module-level `const config = Config.unwrap({ ... })` declared above `make`, destructured at the top of a parameterless `make`. `make` takes parameters only for runtime arguments.
-- One concept per file named after it, one barrel per directory that only re-exports `export * as Name from "./Name.ts"`. Consumers import the namespace and address members through it, `Head.Head`, `Head.layer`. Siblings import each other relatively, never through their own barrel.
-- Model each distinct failure as its own tagged error class. Class name and tag end in `Error`. Use `Data.TaggedError` by default and `Schema.TaggedErrorClass` for errors that cross a process boundary. Pass the source error as `cause` in every translation.
-- Model data with `Schema.Struct` and `export type X = typeof X.Type`. Model scalar ids and value objects as branded schemas, with checks applied first and `Schema.brand` last. Decode unknown input at the boundary with `Schema.decodeUnknownEffect`.
+- Write effects as `Effect.gen(function* () { ... })` generators and keep the body plain. Take each value out with `yield*` on its own line and work on it in plain code. Use `.pipe` on an effect to change how it runs or fails, such as retrying, timing out, catching, or providing.
+- Anything that applies to the whole call, such as translating errors, taking a permit, or retrying, goes in the arguments after the generator in `Effect.fn`, with error handling before permits, timeouts, and `Effect.uninterruptible`.
+- A function that takes arguments is `Effect.fn("Module.operation")` when it is a public service method or an internal one that does real work, and `Effect.fnUntraced` when it is an internal helper where a span adds nothing.
+- Define a service as a `Context.Service` class. When it has one implementation, declare `const make` above the class, pass it as `{ make }`, and let TypeScript infer the service interface from it instead of declaring one. When several implementations share one contract, declare the interface and leave `make` out.
+- A service member that reads is an Effect named as a noun, and one that acts is an `Effect.fn` named with a verb.
+- One concept per file named after it, and one barrel per directory that only re-exports `export * as Name from "./Name.ts"`. Consumers import the namespace and address members through it, `Head.Head`, `Head.layer`.
+- Model each distinct failure as its own tagged error class, named for what went wrong and never for its module alone. Use `Data.TaggedError` by default and `Schema.TaggedError` for errors that cross a process boundary. An error made from another error wraps it as `cause`, and also as `reason` when callers should reach it by tag.
+- Translate a known error with `Effect.catchTag` naming its tag, so an error added later fails the build instead of being wrapped silently. `Effect.mapError` is for a channel typed `unknown` and for the outermost boundary.
+- A check that needs an implementation's knowledge is a member of the contract, and the contract declares only its error.
+- Model data with `Schema.Struct`. Model entity ids, units whose raw values could be mixed up, and values with a rule of their own as branded schemas. Decode unknown input at the boundary with `Schema.decodeUnknownEffect`.
 - Build a value with `schema.makeEffect(...)` when the input may be invalid. `schema.make(...)` throws, so use it only on trusted input.
 - A plain function that can fail returns `Result`. Write it with `Result.gen` when more than one branch can fail.
 - Model internal variants with `Data.TaggedEnum` and dispatch with `$match`. Model variants that cross a boundary with `Schema.TaggedUnion` and dispatch with `.match`.

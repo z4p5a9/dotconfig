@@ -4,9 +4,9 @@ Use this when defining an error class, deciding what an operation can fail with,
 
 ## Defining errors
 
-Every distinct failure is its own class. The class name ends in `Error` and the tag is the class name spelled again, so one failure has one name in `catchTag` and on the wire.
+Every distinct failure is its own class, and its name states what went wrong, `DocumentNotFoundError`, `MalformedModelSettingsError`, `ModelNotSupportedError`, `JobRunningError`. A class is never named for its module alone. `MultiplexerError` says where, not what. A contract that several implementations share still owns its failures, named for what went wrong at its level, `MultiplexerUnavailableError`, and each implementation wraps its own errors in them. The module's name is fine for a union of its failures.
 
-`Data.TaggedError` is the default. `Schema.TaggedErrorClass` is for errors that cross a process boundary, where they need encoding. The split keeps internal errors from leaking through an API by accident, since only the schema backed ones can be serialized.
+`Data.TaggedError` is the default. `Schema.TaggedError` is for errors that cross a process boundary, where they need encoding. The split keeps internal errors from leaking through an API by accident, since only the schema backed ones can be serialized.
 
 ```ts
 export class DocumentNotFoundError extends Data.TaggedError("DocumentNotFoundError")<{
@@ -14,18 +14,18 @@ export class DocumentNotFoundError extends Data.TaggedError("DocumentNotFoundErr
   readonly documentId: string;
 }> {}
 
-export class EmailTakenError extends Schema.TaggedErrorClass<EmailTakenError>()("EmailTakenError", {
+export class EmailTakenError extends Schema.TaggedError<EmailTakenError>()("EmailTakenError", {
   email: Schema.String,
 }) {}
 ```
 
 Fields carry the data that failure has. Human-readable text goes in `message`, so native stringification, stacks, and logs work.
 
-An error made from another error declares `cause`. A defect is `unknown`, so the field is `readonly cause: unknown` on a `Data.TaggedError` and `cause: Schema.Defect()` on a `Schema.TaggedErrorClass`, which encodes it as JSON. The field is required when every instance wraps a source, so leaving the source out is a type error. It is optional, `cause?: unknown` or `Schema.optional(Schema.Defect())`, only when the error is sometimes raised with no source.
+An error made from another error wraps it as `cause`, the standard link that logs and tools follow. The field is `readonly cause: unknown` on a `Data.TaggedError`, or the source's class when it is always the same one, and `cause: Schema.Defect()` on a `Schema.TaggedError`, which encodes it as JSON. The field is required when every instance wraps a source, so leaving the source out is a type error. It is optional, `cause?: unknown` or `Schema.optional(Schema.Defect())`, only when the error is sometimes raised with no source.
 
 ## Error unions
 
-An operation's error channel is the union of the classes it can fail with, named with the `Error` suffix like the classes.
+An operation's error channel is the union of the classes it can fail with, written inline in its signature. The union gets a name when two signatures share it, named for the operation or the module.
 
 ```ts
 export type EncodeError = Int64OutOfRangeError | UnpairedSurrogateError | InvalidDocumentIdLengthError;
@@ -35,7 +35,7 @@ Each operation exposes errors that describe its own failures. When it calls a lo
 
 ## Reasons
 
-A `reason` field holds a union of tagged error classes, never a union of string literals. String reasons collapse failures with different data into one widest record, where the variant needing an extra field forces it onto every other. Reserve `reason` for variants nested under one operation error. Independent failures stay top-level classes in the operation's union.
+A `reason` also wraps the error this one was made from, typed, so callers can still reach it by tag. It comes on top of `cause`, never instead of it, since logs and tools follow `cause` only. Use it when callers should branch on the wrapped error, and leave it out when the source is only for the log. A `reason` is never a label for a kind of failure. Each distinct failure is its own class in the operation's union.
 
 ```ts
 class RateLimitError extends Data.TaggedError("RateLimitError")<{ readonly retryAfter: number }> {}
@@ -43,6 +43,7 @@ class QuotaError extends Data.TaggedError("QuotaError")<{}> {}
 
 class RequestError extends Data.TaggedError("RequestError")<{
   readonly reason: RateLimitError | QuotaError;
+  readonly cause: unknown;
 }> {}
 ```
 
@@ -61,15 +62,17 @@ request.pipe(
 The module that owns a client, SDK, or driver translates its failures into that module's own tagged errors before they cross its interface. `Effect.try` and `Effect.tryPromise` take a `catch` that receives the thrown value, and `Result.try` does the same for plain code. `Effect.tryPromise` hands its `try` an `AbortSignal`, which goes into the call so that interruption cancels it.
 
 ```ts
-const fetchUser = Effect.fn("Users.fetch")(function* (id: UserId) {
+const fetchUser = Effect.fn("Users.fetch")(function* (userId: UserId) {
   return yield* Effect.tryPromise({
-    try: (signal) => client.get(`/users/${id}`, { signal }),
-    catch: (cause) => new UserFetchError({ id, cause }),
+    try: (signal) => client.get(`/users/${userId}`, { signal }),
+    catch: (cause) => new UserFetchError({ userId, cause }),
   });
 });
 ```
 
-Every conversion from one error into another passes the untouched source as `cause`. This holds whether the handler is `catch`, `Effect.mapError`, `Effect.catchTag`, or a bare `try` and `catch`. A `catch` callback that ignores its argument is where the source gets lost.
+A known error is translated with `Effect.catchTag` or `Effect.catchTags` naming its tag, even when it is the only one in the channel, so an error added later stays in the channel and fails the build instead of being wrapped silently. `Effect.mapError` is for a channel typed `unknown`, and for the outermost boundary that collapses every failure into one response.
+
+Every conversion from one error into another passes the untouched source as `cause`.
 
 A failure that means the program is wrong, such as a violated invariant or an impossible branch, is a defect. `Effect.orDie` turns a typed failure into one and `Effect.die` raises one directly. Expected failures stay typed even when the immediate caller cannot recover, and the caller returns them upward.
 

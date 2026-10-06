@@ -64,7 +64,7 @@ const make = Effect.gen(function* () {
   return { events: Stream.fromQueue(queue) };
 });
 
-export class Gateway extends Context.Service<Gateway>()("@app/gateway/Gateway", { make }) {}
+export class Gateway extends Context.Service<Gateway>()("@app/Gateway", { make }) {}
 
 export const layer = Layer.effect(Gateway, make);
 ```
@@ -75,4 +75,4 @@ Work keyed by session or id, where each key runs in order and different keys run
 
 ## Errors
 
-A stream fails with typed errors like an effect. `Stream.mapError` translates them at the owning boundary, and `Stream.catchTag` or `Stream.catchFilter` recovers from the typed ones. `Stream.catchCause` belongs at a supervision boundary only. A defect in a stream reaches the layer that owns the consumer, which is the point, so nothing below it swallows causes.
+A stream fails with typed errors like an effect. `Stream.catchTag` translates a known error at the owning boundary and recovers from it, `Stream.catchFilter` does the same through a `Filter`, and `Stream.mapError` is for a channel typed `unknown`. `Stream.catchCause` belongs at a supervision boundary only. A defect in a stream reaches the layer that owns the consumer, which is the point, so nothing below it swallows causes.

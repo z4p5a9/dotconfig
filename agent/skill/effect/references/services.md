@@ -4,9 +4,9 @@ Use this when defining a service, writing its layers, reading config in it, or w
 
 ## Defining a service
 
-A service is a class extending `Context.Service`. Its string key is the file's path under `src`, scoped by the project name, as in `"@app/log/Head"` for `src/log/Head.ts`. A second service declared in the same file takes the file as its prefix, as in `"@app/log/Head/Watcher"`. Effect keys its own services the same way, `"effect/sql/SqlClient"` for `sql/SqlClient.ts`, so two services with the same name in different directories never share a slot.
+A service is a class extending `Context.Service`.
 
-When one implementation owns the service, declare `const make` above the class and pass it as `{ make }`, so the service interface infers from what `make` returns. The module does not export `make`. The class carries it as `Head.make`, which is how tests build a real instance. State lives inside `make`, as locals the returned functions close over, never as class fields.
+When one implementation owns the service, declare `const make` above the class and pass it as `{ make }`, so the service interface infers from what `make` returns. The class carries it as `Head.make`, which is how tests build a real instance, so the module does not export it. State lives inside `make`, as locals the returned functions close over, never as class fields.
 
 ```ts
 const make = Effect.gen(function* () {
@@ -20,25 +20,25 @@ const make = Effect.gen(function* () {
   return { current, advance };
 });
 
-export class Head extends Context.Service<Head>()("@app/log/Head", { make }) {}
+export class Head extends Context.Service<Head>()("@app/Head", { make }) {}
 
 export const layer = Layer.effect(Head, make);
 ```
 
-When several implementations share one contract, write the interface as the second type argument and leave `make` out. Each implementation is its own module exporting `make` and `layer`.
+When several implementations share one contract, write the interface as the second type argument and leave `make` out. Each implementation is its own module exporting `make` and `layer`. A check that needs an implementation's knowledge, such as whether a harness supports a model, is a member of the contract that each implementation writes, and the contract declares only the error it fails with.
 
 ```ts
 export class Validation extends Context.Service<
   Validation,
   { readonly check: (snapshot: TransactionId, readSet: ReadSet) => Effect.Effect<void, ConflictError> }
->()("@app/log/Validation") {}
+>()("@app/Validation") {}
 ```
 
-A member that reads is an Effect named as a noun, `head.current`. A member that acts is an `Effect.fn` named with a verb, `head.advance`, whether or not it takes arguments, with the span `"Head.advance"`. The namespace already names the subject, so a member does not repeat it, `authorization.request`, not `authorization.requestAuthorization`.
+A member that reads is an Effect named as a noun, `head.current`. A member that acts is an `Effect.fn` named with a verb, `head.advance`, whether or not it takes arguments.
 
 ## Layers
 
-A service module exports the class and `layer`. When `make` yields services this codebase owns, it also exports `layerNoDeps`, the bare `Layer.effect(Service, make)`, and `layer` provides those dependencies on top of it. With no such dependencies there is only `layer`. Effect, platform, and runtime services stay as requirements of `layer`.
+A service module exports the class and `layer`. When `make` yields services this codebase owns, it also exports `layerNoDeps`, the bare layer, and `layer` provides those dependencies on top of it. Effect, platform, and runtime services stay as requirements of `layer`.
 
 ```ts
 const make = Effect.gen(function* () {
@@ -48,7 +48,7 @@ const make = Effect.gen(function* () {
   // ...
 });
 
-export class Committer extends Context.Service<Committer>()("@app/log/Committer", { make }) {}
+export class Committer extends Context.Service<Committer>()("@app/Committer", { make }) {}
 
 export const layerNoDeps = Layer.effect(Committer, make);
 
@@ -83,7 +83,7 @@ Real implementations default to `Layer.effect(Head, make)`. The other constructo
 
 ## Config
 
-Every value from the environment enters through `Config`. Application code never reads `process.env`.
+Every value from the environment enters through `Config`.
 
 A service reads its config values from a module-level `const config = Config.unwrap({ ... })` declared above `make` and destructures it at the top of a parameterless `make`. No type is declared for the record. The destructuring is the type.
 
@@ -98,7 +98,7 @@ const make = Effect.gen(function* () {
   // ...
 });
 
-export class WriteLog extends Context.Service<WriteLog>()("@app/log/WriteLog", { make }) {}
+export class WriteLog extends Context.Service<WriteLog>()("@app/WriteLog", { make }) {}
 
 export const layer = Layer.effect(WriteLog, make);
 ```

@@ -6,7 +6,7 @@ Use this when writing an Effect test, faking a service, driving time, waiting on
 
 A test is `it.effect` from `@effect/vitest`, with `describe` and `expect` from `vitest`. `it.effect` runs the effect with a test clock that starts at zero and a test console. `it.live` runs on the real clock, for the rare test where real time is the behavior under test.
 
-Each test is self contained. It builds the layers it needs at its own `Effect.provide`, so it gets a fresh instance of everything stateful, and nothing it needs sits above it in the file. Repeating a literal across tests is the expected cost. A file level layer is one reusable fixture, never an aggregate test environment. `it.layer(layer)` shares one built layer across a block and is for a resource too expensive to build per test, such as a database.
+Each test is self contained. It builds the layers it needs at its own `Effect.provide`, so it gets a fresh instance of everything stateful. Repeating a literal across tests is the expected cost. A file level layer is one reusable fixture, never an aggregate test environment. `it.layer(layer)` shares one built layer across a block and is for a resource too expensive to build per test, such as a database.
 
 ```ts
 describe("Committer.commit", () => {
@@ -22,7 +22,7 @@ describe("Committer.commit", () => {
 
 ## Fakes
 
-A fake is a `Layer.succeed` over the real service shape, written inside the test that needs it. Most fakes wrap a real instance and intercept the one member the test observes, so everything else keeps its real behavior.
+A fake is a `Layer.succeed` over the real service interface, written inside the test that needs it. Most fakes wrap a real instance and intercept the one member the test observes, so everything else keeps its real behavior.
 
 ```ts
 const real = yield* Head.Head.make;
@@ -50,7 +50,7 @@ yield* TestClock.adjust("5 seconds");
 const exit = yield* Fiber.await(fiber);
 ```
 
-A bare `Effect.sleep` in a test waits real time and only makes the test slow. When a test has no choice but to let real time pass, such as polling a fiber blocked on something other than the clock, wrap that one effect in `TestClock.withLive`.
+When a test has no choice but to let real time pass, such as polling a fiber blocked on something other than the clock, wrap that one effect in `TestClock.withLive`.
 
 ## Synchronization
 
@@ -74,8 +74,6 @@ yield* real.advance(TransactionId.make(1n));
 
 expect(yield* Fiber.join(reading)).toHaveLength(1);
 ```
-
-A forked fiber in a test is `Effect.forkChild`, and the test joins it with `Fiber.join` so its failure fails the test.
 
 ## Config
 
