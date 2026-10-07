@@ -29,6 +29,7 @@ These mark text as machine written. Each gets the fix beside it.
 | Several names for one thing | The one name, repeated |
 | Em dashes, semicolons, parentheses, hyphens as dashes | A period or a comma |
 | "**Label:** sentence restating the label" bullets | A plain sentence |
+| A phrase, a colon, then the point, "The catch: it leaks", "On macOS: the path differs" | Cut a phrase that only announces the point, "It leaks". Join a phrase that carries meaning with a comma or a period, "On macOS, the path differs" |
 | Stacked hedges, "could potentially" | One "may", or none |
 | "It's worth noting", "It's important to note", "Here's the thing", "Let's dive in" | Delete |
 | Recaps, "I hope this helps", "Let me know if…" | Delete |
