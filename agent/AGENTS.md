@@ -67,23 +67,25 @@ Every subagent runs on one of three models, exactly as named below. `orchestrato
 
 Opus, `claudeAgent` / `claude-opus-5-5`, decides and builds what ships. It owns UI, API design, architecture, high level decisions, and production code that gets merged and deployed.
 
-Sol, `codex` / `gpt-6.1-sol`, challenges and digs. It reviews and advises, plays devil's advocate against a direction or plan, and takes an idea one level deeper to surface what we missed. It runs thorough research whose findings go back to Opus to judge. It writes throwaway code that nobody merges or reads, such as a script that tries something out. It drives a computer well, which makes it the model for QA.
+Sol, `codex` / `gpt-6.1-sol`, challenges and digs. It reviews, audits, and advises, plays devil's advocate against a direction or plan, and takes an idea one level deeper to surface what we missed. It runs thorough research whose findings go back to Opus to judge. It writes throwaway code that nobody merges or reads, such as a script that tries something out. It drives a computer well, which makes it the model for QA.
 
-Sonnet, `claudeAgent` / `claude-sonnet-5-5`, executes. It runs audits and codebase recon. It writes code from a spec so complete that it makes no decisions of its own, such as one step of an approved plan, as a faster and cheaper hand under an Opus orchestrator.
+Haiku, `claudeAgent` / `claude-haiku-5-5`, scouts. It runs codebase recon, gathers context for another agent, and checks narrow facts, such as which files call a function. It fits work where many cheap attempts beat one smart attempt and each result is cheap to check, such as testing several theories in parallel. Give it one narrow task, and split a large job into small batches. It mishandles errors, such as saving an error response as data, so the agent that spawned it checks its output before using it.
 
-When the work fits no role, pick by what it demands most. Scores run 1 to 4, higher is better.
+When the work fits no role, pick by what it demands most. Scores run 1 to 4, higher is better. The last row is the reasoning to spawn each model with.
 
-| | Opus | Sonnet | Sol |
+| | Opus | Sol | Haiku |
 |---|---|---|---|
-| taste, API and product sense | 4 | 2 | 1 |
-| ui, good looking usable interfaces | 4 | 2 | 1 |
-| craft, correct clean code | 4 | 3 | 2 |
-| scrutiny, finding bugs, holes, and false claims | 2 | 3 | 4 |
-| thoroughness, covering every case | 3 | 3 | 4 |
-| speed, wall clock time to a finished task | 3 | 3 | 4 |
-| cost, per finished task rather than per token | 1 | 2 | 4 |
+| intelligence, reasoning through a hard problem | 4 | 4 | 2 |
+| taste, API and product sense | 4 | 1 | 1 |
+| ui, good looking usable interfaces | 4 | 1 | 1 |
+| craft, correct clean code | 4 | 2 | 1 |
+| scrutiny, finding bugs, holes, and false claims | 2 | 4 | 1 |
+| thoroughness, covering every case | 3 | 4 | 1 |
+| speed, wall clock time to a finished task | 2 | 3 | 4 |
+| cost, per finished task rather than per token | 1 | 3 | 4 |
+| reasoning | `high`, `xhigh` for the hard parts | `high`, `xhigh` for the hard parts | `high` |
 
-Spawn with these settings. Reasoning is `high` for most work and `xhigh` for the hard parts.
+Spawn with these settings.
 
 ```ts
 delegate_task({
@@ -91,16 +93,16 @@ delegate_task({
   runtimeMode: "full-access",
   target: {
     providerInstanceId: "claudeAgent",
-    model: "claude-sonnet-5-5",
-    options: { effort: "high", contextWindow: "1m" },
+    model: "claude-opus-5-5",
+    options: { effort: "high" },
   },
 })
 
-// Sol has no context option and names reasoning differently.
+// Sol names reasoning differently.
 target: { providerInstanceId: "codex", model: "gpt-6.1-sol", options: { reasoningEffort: "high" } }
 ```
 
-- A review runs on the other provider, so a model with different training looks at the same work. Sol reviews Opus and Sonnet work. Opus or Sonnet reviews Sol's work, picked by what the review demands most in the table.
+- A review runs on the other provider, so a model with different training looks at the same work. Sol reviews Opus and Haiku work. Opus reviews Sol's work.
 - Only I change the model. A flagged prompt gets rewritten and retried on the same model. A transient failure gets a wait and a retry. If it still can't run, stop and tell me.
 
 ## .AGENTS.md
