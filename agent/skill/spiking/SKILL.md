@@ -44,16 +44,16 @@ The child reports in whatever shape fits what it found, as long as every claim p
 
 Done when every spike of the round has come back.
 
-## 4. Attack
+## 4. Challenge
 
-Spawn an attacker for each spike, on a different model than the one that ran it. It reads and runs the code in the worktree, and leaves it unchanged. It attacks the design, not the implementation. It looks for a need the design can't meet without changing its surface, a decision the design hides that an implementation needs, and a detail the design exposes that callers will come to depend on. It writes code to show each one.
+Spawn a challenger for each spike, on a different model than the one that ran it. It reads and runs the code in the worktree, and leaves it unchanged. It challenges the design, not the implementation. It looks for a need the design can't meet without changing its surface, a decision the design hides that an implementation needs, and a detail the design exposes that callers will come to depend on. It writes code to show each one.
 
-- A blind attacker gets the spike's question and the worktree, but not the report, and forms its own reading, so the report cannot anchor it. This fits a probe, whose verdict it can reach on its own.
-- An informed attacker gets the report and the worktree, and tries to break every claim the report makes about the design. This fits a solve and a load.
+- A blind challenger gets the spike's question and the worktree, but not the report, and forms its own reading, so the report cannot anchor it. This fits a probe, whose verdict it can reach on its own.
+- An informed challenger gets the report and the worktree, and tries to break every claim the report makes about the design. This fits a solve and a load.
 
-Where the attacker and the spike disagree, running code settles it, not argument.
+Where the challenger and the spike disagree, running code settles it, not argument.
 
-Done when every spike has been attacked, and every dispute is settled by evidence or marked open.
+Done when every spike has been challenged, and every dispute is settled by evidence or marked open.
 
 ## 5. Weigh
 
@@ -75,7 +75,7 @@ Done when a round ends with no reshape, no new design worth loading, and no open
 
 ## 7. Present
 
-Present the journey round by round. For each round, cover what it spiked, which designs came out, what the loads and attacks broke, the verdict on each break, and how the round shaped the next.
+Present the journey round by round. For each round, cover what it spiked, which designs came out, what the loads and challenges broke, the verdict on each break, and how the round shaped the next.
 
 Then present the design that held, written as code. It draws on everything the rounds taught, never on one spike's design carried over unexamined. Judge it on each of these, with evidence:
 

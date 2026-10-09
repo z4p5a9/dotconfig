@@ -1,12 +1,12 @@
 ---
 name: refining
-description: Improve an implementation beneath a fixed design across models in parallel worktrees, with throwaway rewrites and attacks, until no candidate beats the best. T3 Code only.
+description: Improve an implementation beneath a fixed design across models in parallel worktrees, with throwaway rewrites and challenges, until no candidate beats the best. T3 Code only.
 disable-model-invocation: true
 ---
 
 # Refining
 
-Refining improves the implementation beneath a design whose surface stays fixed. A design here is an abstraction, an architecture, or both, and its surface is what callers use. Rival rewrites compete to be simpler, faster, and clearer, and attackers break each one by running code. The rewrites are thrown away. The knowledge and the tests are the output, and we decide on the final implementation from them.
+Refining improves the implementation beneath a design whose surface stays fixed. A design here is an abstraction, an architecture, or both, and its surface is what callers use. Rival rewrites compete to be simpler, faster, and clearer, and challengers break each one by running code. The rewrites are thrown away. The knowledge and the tests are the output, and we decide on the final implementation from them.
 
 The surface is fixed for the whole run. A break that only a surface change can fix is escalated to `/spiking`, and the run goes on without it.
 
@@ -39,16 +39,16 @@ The child measures every goal with the shared benchmark and reports each against
 
 Done when every candidate of the round has come back.
 
-## 4. Attack
+## 4. Challenge
 
-Spawn an attacker for each candidate, on a different model than the one that ran it. It reads and runs the code in the worktree, and leaves it unchanged. It breaks the candidate by running code, with faults, races, lost replies, load, and odd inputs, and it reruns the measures. Each break becomes a test written against the surface that goes red on the candidate. Because it goes through the surface, the test holds for any implementation beneath it, the final one included.
+Spawn a challenger for each candidate, on a different model than the one that ran it. It reads and runs the code in the worktree, and leaves it unchanged. It tests the candidate by running code under injected faults, races, dropped replies, heavy load, and edge-case inputs, and it reruns the measures. Each break becomes a test written against the surface that goes red on the candidate. Because it goes through the surface, the test holds for any implementation beneath it, the final one included.
 
-- A blind attacker gets the hypothesis and the worktree, but not the report, and forms its own reading, so the report cannot anchor it. This fits a probe, whose verdict it can reach on its own.
-- An informed attacker gets the report and the worktree, and tries to break every claim. This fits a rewrite.
+- A blind challenger gets the hypothesis and the worktree, but not the report, and forms its own reading, so the report cannot anchor it. This fits a probe, whose verdict it can reach on its own.
+- An informed challenger gets the report and the worktree, and tries to break every claim. This fits a rewrite.
 
-Where the attacker and the candidate disagree, running code settles it, not argument.
+Where the challenger and the candidate disagree, running code settles it, not argument.
 
-Done when every candidate has been attacked, every break has its red test, and every dispute is settled by evidence or marked open.
+Done when every candidate has been challenged, every break has its red test, and every dispute is settled by evidence or marked open.
 
 ## 5. Weigh
 
@@ -72,8 +72,8 @@ Done when a round finds no break worth fixing, no candidate beats the best on an
 
 ## 7. Present
 
-Present the journey round by round. For each round, cover what it ran, what the attacks broke, the verdict on each break, and how the round shaped the next.
+Present the journey round by round. For each round, cover what it ran, what the challenges broke, the verdict on each break, and how the round shaped the next.
 
-Then show every goal in one table, with the base and every candidate as columns. Propose the final implementation, combining what every candidate and attack taught, with why and the evidence behind each reason. It is never one candidate's code carried over. The shared suite carries over to it. List the fixed breaks with their tests, the accepted limits, the escalations for `/spiking`, and the rabbit holes with their reasons. Keep the worktrees until the work is done, since they are the evidence.
+Then show every goal in one table, with the base and every candidate as columns. Propose the final implementation, combining what every candidate and challenge taught, with why and the evidence behind each reason. It is never one candidate's code carried over. The shared suite carries over to it. List the fixed breaks with their tests, the accepted limits, the escalations for `/spiking`, and the rabbit holes with their reasons. Keep the worktrees until the work is done, since they are the evidence.
 
 Done when the journey and the proposal are presented, every reason points to evidence, and the proposal draws on every round, not on one candidate alone.

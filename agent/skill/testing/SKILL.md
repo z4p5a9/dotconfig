@@ -161,4 +161,6 @@ Matching only ValidationError would also pass on a negative price.
 
 ## 3. Prove it turns red
 
-Break the condition the test guards, by running it before the code exists or by flipping the behavior under test, and run it. It fails, and it fails for the reason the name states. Restore the code and run it again. Done when you have seen both the red run and the green run.
+This step covers each test you wrote or changed. A test you left as it was only needs to run green.
+
+Break the condition the test guards, by running it before the code exists or by flipping the behavior under test, and run it. It fails, and it fails for the reason the name states. Restore the code and run it again. Done when you have seen both the red run and the green run for every test you wrote or changed.

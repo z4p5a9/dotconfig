@@ -103,6 +103,7 @@ target: { providerInstanceId: "codex", model: "gpt-6.1-sol", options: { reasonin
 ```
 
 - A review runs on the other provider, so a model with different training looks at the same work. Sol reviews Opus and Haiku work. Opus reviews Sol's work.
+- Write each task prompt in the plain terms of software design and testing. Open it with what the code is, that it is ours, and what the work is for. State each check as the property the code must keep, such as "malformed text fails with `MalformedValueError`".
 - Only I change the model. A flagged prompt gets rewritten and retried on the same model. A transient failure gets a wait and a retry. If it still can't run, stop and tell me.
 
 ## .AGENTS.md
