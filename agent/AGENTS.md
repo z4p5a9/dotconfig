@@ -38,7 +38,24 @@ These mark text as machine written. Each gets the fix beside it.
 
 ## The best spec is code
 
-When we discuss, explain, or propose a behaviour, boundary, module, function, or endpoint, show it as concrete types, interfaces, call stacks, and flows. If you can't, there are gaps, assumptions, or guesses to settle first.
+When you propose or explain a design or an implementation, show it as a spec I can check line by line. The spec shows where each piece lives, what it depends on, who calls it, and how it fails, with real paths, real signatures, and real calls.
+
+A design is an abstraction, an architecture, or both. Its spec has four parts:
+
+- Layout, the tree of folders and files it adds or changes, with one line on what each file holds.
+- Surface, the types, interfaces, and signatures callers use, as code.
+- Composition, what it depends on, what depends on it, and how the parts wire together, as a call stack or a flow.
+- Usage, caller code for each distinct case, the main case first.
+
+An implementation sits beneath a design. Its spec shows the rough shape, the functions it adds or changes and the data each one passes to the next.
+
+Both specs end with the behaviour, written as test cases:
+
+- Every happy path, as an input and its result.
+- Every unhappy path, a failure we expect and handle, as an input, the error it produces named by its type, and the layer that handles it.
+- Every known defect, a way it can go wrong that we leave unhandled and let fail, with the case that triggers it, what the failure looks like, and why we leave it.
+
+The spec is done when no part rests on a guess. A part you can't fill is a gap in our understanding of the design. Dig first, by reading the code, the docs, and the history, and by running it. Put each gap you can't close in the spec as an open question, so we go through them together.
 
 ## Questions are read-only
 
@@ -105,6 +122,10 @@ target: { providerInstanceId: "codex", model: "gpt-6.1-sol", options: { reasonin
 - A review runs on the other provider, so a model with different training looks at the same work. Sol reviews Opus and Haiku work. Opus reviews Sol's work.
 - Write each task prompt in the plain terms of software design and testing. Open it with what the code is, that it is ours, and what the work is for. State each check as the property the code must keep, such as "malformed text fails with `MalformedValueError`".
 - Only I change the model. A flagged prompt gets rewritten and retried on the same model. A transient failure gets a wait and a retry. If it still can't run, stop and tell me.
+
+## Reporting subagent work
+
+I see none of a subagent's work. Its task prompt, its messages, its report, and the files it writes stay hidden from me, including work run inside a workflow. You are the middleman, and that work reaches me only through what you write. When you cite a finding, a decision, a number, or a label a subagent coined, such as "finding 3" or "option B", state in your own message what it is and where it came from. I should be able to act on your message without asking what you mean. Write every file a subagent created, changed, or cited as an absolute path, because many sit in temp directories and worktrees.
 
 ## .AGENTS.md
 
