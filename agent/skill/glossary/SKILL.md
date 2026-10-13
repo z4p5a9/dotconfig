@@ -74,7 +74,7 @@ The state at which an agent isn't doing any active work.
 
 ### Avoid
 
-The avoid list holds the words either of us would reach for in place of the name. These are its synonyms, the words other projects or libraries use for the same concept, and the neighbouring terms it is easily confused with.
+The avoid list holds the words either of us would reach for in place of the name. These are its synonyms, the words other projects or libraries use for the same concept, and the neighbouring terms it is easily confused with. The list stops a word from standing in for this term's concept, and the word stays free in its own meaning, so "payment provider" is fine beside a term that avoids "provider".
 
 ## 1. Read
 
@@ -99,7 +99,7 @@ Write the entry exactly as approved. A new term goes in the cluster of the terms
 Reread the whole glossary, not only the entry just written. A review runs 1 and then starts here.
 
 - Is every word in a definition plain or another term?
-- Does any definition use a word that another term avoids?
+- Does any definition use a word another term avoids to mean that term's concept?
 - Is every term spelled as its name, lowercase?
 - Would every definition stay true if the code under it were rewritten?
 
