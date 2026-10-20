@@ -13,7 +13,9 @@ A good design exposes the right primitives at the right level, so callers compos
 ## 1. Understand
 
 - The problem, and why it is asked for.
+- The goal the problem serves, one level up.
 - The needs any design must meet, such as features, use cases, scale, and the implementations it must allow. Every spike draws its load from these.
+- How the best in the field solve this problem. That means the established designs, the primitives they're built from, the names the field uses for them, and the needs those designs answer that we haven't stated. Read the raw sources, such as the code and types of projects that solve it, the papers, and the specs, rather than summaries of them.
 - Any design already in mind or already in the code.
 - The current state of the code and everything around it, such as docs, history, issues, dependencies, and data.
 
@@ -27,7 +29,7 @@ Pick this round's spikes. A spike is one of three kinds.
 - A load puts one need on an existing design, either above it as a caller or beneath it as an implementation, and reports where the design broke and where it caused friction. Pick needs that pull the design in different directions, the awkward ones included, and implementations that differ where the design claims to hide a decision.
 - A probe tests one fact a design rests on. It is thin, end to end, and through the real risk, so its result can prove the fact false.
 
-Settle by reading whatever reading can settle. Write each load's and each probe's question as a falsifiable hypothesis, which is a claim and the result that would prove it false, before any code. When no design exists, run at least two solves. A design brought to the spike still gets at least one rival solve, because a rival that slices the problem differently is the strongest test of a slice.
+Settle by reading whatever reading can settle. Write each load's and each probe's question as a falsifiable hypothesis before any code. A hypothesis is a claim, the result that would prove it false, and its judge, which is the check that produces that result, such as real call sites that must compile against the surface. When no design exists, run at least two solves. A design brought to the spike still gets at least one rival solve, because a rival that slices the problem differently is the strongest test of a slice. Rival solves start from the field's established designs, and from fields that solve the same problem under another name.
 
 Done when every spike of the round has its question, and every load and probe has its hypothesis.
 
@@ -84,6 +86,7 @@ Then present the design that held, written as code. It draws on everything the r
 - Does its surface expose the right primitives, at the right level, neither too low nor too abstract?
 - Do callers compose those primitives with little friction?
 - Does it hide the decisions the implementation needs free, and expose what callers need and no more?
+- Where does it differ from the field's established designs, and what did the rounds show that justifies each difference?
 
 List each reshape and the break behind it. List the absorbed breaks, because the implementation will need them. List the accepted limits. Name the rabbit holes to stay away from, each with its reason. Keep the worktrees until the work is done, since they are the evidence.
 
