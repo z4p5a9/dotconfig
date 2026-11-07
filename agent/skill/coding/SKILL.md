@@ -15,7 +15,6 @@ An identifier is always named with its owner, `harnessId` and `Harness.HarnessId
 
 - A predicate is `has` or `is`, `hasSession`, `isRunning`.
 - A converter is `to` followed by its target, `toSessionTarget`, `toEnvFlags`.
-- A lookup is `get` with the suffix that says what a miss returns, `getPaneOrUndefined`, `getPaneOption`, and the plain name when a miss is a failure.
 - A function takes the narrowest argument it uses, a `Flock.Slug` rather than the whole ref.
 - A general operation is named for what it does, never for the first caller that needed it. `Process.foreground` brings a process to the foreground, and the caller that attaches to it is one of its users.
 

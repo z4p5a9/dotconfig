@@ -6,7 +6,7 @@ Use this when writing an Effect test, faking a service, driving time, waiting on
 
 A test is `it.effect` from `@effect/vitest`, with `describe` and `expect` from `vitest`. `it.effect` runs the effect with a test clock that starts at zero and a test console. `it.live` runs on the real clock, for the rare test where real time is the behavior under test.
 
-Each test is self contained. It builds the layers it needs at its own `Effect.provide`, so it gets a fresh instance of everything stateful. Repeating a literal across tests is the expected cost. A file level layer is one reusable fixture, never an aggregate test environment. `it.layer(layer)` shares one built layer across a block and is for a resource too expensive to build per test, such as a database.
+Each test is self contained. It builds the layers it needs at its own `Effect.provide`, so it gets a fresh instance of everything stateful. Repeating a literal across tests is the expected cost. Nothing is built at file level, not even a single config layer, so every test declares its own. `it.layer(layer)` shares one built layer across a block and is for a resource too expensive to build per test, such as a database.
 
 ```ts
 describe("Committer.commit", () => {

@@ -12,6 +12,8 @@ Three forms, by what they record:
 - `Effect.fn(function* (args) { ... })` captures stack frames without a span. Use it for internal functions that should still show in a stack trace.
 - `Effect.fnUntraced(function* (args) { ... })` records nothing. Use it for internal helpers and hot paths.
 
+A public service method keeps `Effect.fn("Module.foo")` even when its body has no `yield`, with the plain code written directly in the generator, so every public method has a span. An internal helper whose body has no `yield` is a plain arrow that returns `Effect.sync`, not a generator.
+
 ## Transforms
 
 Arguments after the generator function are transforms. Each receives the effect built so far and the original arguments, `(effect, ...args)`, and returns the next effect. Anything that applies to the whole call goes there and the body stays plain: translating errors, recovering locally, annotating logs, retrying, timing out, taking a permit, running uninterruptibly, ensuring cleanup, mapping the result.
