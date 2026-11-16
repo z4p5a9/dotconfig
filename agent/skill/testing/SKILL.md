@@ -137,11 +137,20 @@ There is no test that verifyHash hashes correctly, that is the library's job.
 
 ### Assert the whole shape
 
-Compare the full result against the full expected value, with strict equality or a partial match when only part of the shape matters. One assertion shows the whole picture, and a mismatch prints the whole diff.
+When the code gives back a structured value, such as an object or a list, compare it whole against the full expected value. Use strict equality, or a partial match when only part of the shape matters. A mismatch prints the whole diff, and fields nobody thought to check still get checked.
 
 ```
 receipt = checkout(cart)
 expect receipt == Receipt(total: 10, itemCount: 1, currency: "EUR")
+```
+
+The shape comes from the code, as the value it returns or the type it defines. Values the code gives back separately get one assertion each.
+
+```
+test "stores the user it returns when a user registers"
+  user = register(email: "a@b.c")
+  expect user == User(id: 1, email: "a@b.c")
+  expect findUser(id: 1) == User(id: 1, email: "a@b.c")
 ```
 
 ### Failures are specific
@@ -158,13 +167,3 @@ test "fails with ValidationError code MISSING_SKU when an item has no sku"
 ```
 
 Matching only ValidationError would also pass on a negative price.
-
-## 3. Make sure it can fail
-
-A test that can't fail proves nothing and catches nothing. When you write or change a test, name the change to the code that would turn it red, and check that the assertion depends on that code.
-
-Reading the test usually settles it. Run a failure only when reading leaves doubt, such as an assertion that can pass on an empty result, a loop that may run zero times, or a stand-in that returns the value being asserted. Then flip that one condition, see the test fail for the reason its name states, and restore the code.
-
-Don't break tests one by one as a routine step. A test you left as it was only needs to run green.
-
-Done when you can name what would turn each test you wrote or changed red.
