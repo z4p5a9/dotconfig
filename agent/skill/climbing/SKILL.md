@@ -15,11 +15,10 @@ State these back to the user:
 - The goal, and what may change to reach it.
 - The scope, meaning what judges review and what they leave out, such as "the public surface: exports, names, signatures, types, errors and docs, not the implementation".
 - The principles, if any. A principle is a rule from the user that the work follows and judges score against, such as "no `Type` suffix on names".
-- The measures. A measure is a command that prints a number, or a quality judges score on a scale. The default scale is 1 to 4. Each judged measure gets one line describing each level.
-- The anchors, if any. An anchor is anything worth comparing against. Judges score it the same way as the thing being climbed, with no assumed score.
-- The bar, in the user's terms, such as "every judge gives the top score on every measure", "beat lru-cache on flow", or "p50 under 5ms". When the bar needs many judged scores at the top in the same round, tell the user that judge noise makes this rare.
-- The panel. The default is Opus 5.5, GPT 6.1 Sol, and Muse Wonderful at high reasoning, resolved with `orchestrator_capabilities`.
-- The budget. The default is 10 rounds.
+- The measures. A measure is a command that prints a number, or a quality judges score from 1 to 10 in steps of 0.1. Each judged measure gets one line for each of 1, 4, 7 and 10.
+- The bar, in the user's terms, such as "a panel mean of 9 on every measure" or "p50 under 5ms".
+- The panel. The default is Opus 5.5, GPT 6.1 Sol, and Muse Wonderful at high reasoning, resolved with `orchestrator_capabilities`. Muse is slow and expensive, so it judges every third round starting at round 0, and any round where the bar holds without it.
+- The budget. The default is rounds 0 to 9.
 
 Done when the user approves. After that, only the user changes any of these. A ruling the user makes during the climb becomes a principle.
 
@@ -29,17 +28,11 @@ Run round after round without waiting for the user. End a turn only to wait for 
 
 The first measure runs on the thing as it is, before any change.
 
-Run every command measure every round, and report only numbers you measured. For judged measures, start one new `delegate_task` per judge, all at once, with `role: "review"`, and hold your edits until they return. Judges get the thing, its scope, the principles, the anchors, the measures with their levels, the declined findings with the reason for each, and these instructions: stay read-only, score each one on every measure, and for every score below the top say where the problem is and what would raise it. A declined finding comes back only with a reason its decline didn't consider. The brief changes between rounds only in its declined list. The bar, the round number, and earlier scores stay with you.
+Run every command measure every round, and report only numbers you measured. For judged measures, start one new `delegate_task` per judge, all at once, with `role: "review"`, and hold your edits until they return. Judges get the thing, its scope, the principles, the measures with their levels, the declined findings with the reason for each, and these instructions: stay read-only, score the thing on every measure, and for every score below the top say where the problem is and what would raise it. A declined finding comes back only with a reason its decline didn't consider. The brief changes between rounds only in its declined list. The bar, the round number, and earlier scores stay with you.
 
 A judge that returns nothing gets one fresh retry, then counts as `no score`. A panel member that is unavailable stops the climb, and you report it.
 
-Judges are noisy. On work that didn't change, a fresh judge moves between one in seven and one in four of its scores by a level, up or down. One round never makes a trend. Give every score that moved one label:
-
-- Regression: its finding points at something this round changed. Only a regression means the work got worse.
-- Late find: its finding points at something older that the judge noticed only now.
-- Fixed: this round fixed the judge's earlier finding.
-- Declined: it rose because its finding went on the declined list.
-- Noise: no finding explains it.
+Judges are noisy, so one score moving means nothing on its own. Read the scores for the trend, and act on the findings.
 
 Show the round as one table, with the panel order on the line above it:
 
@@ -48,27 +41,24 @@ Judges in order: Opus, Sol, Muse.
 
 | Measure | R0 | R1 | R2 |
 |---|---|---|---|
-| Idiom | `3 1 2` | `3 3 3` | **`4 4 4`** |
+| Idiom | `6.5 4.0 5.2` | `7.8 8.1` | **`9.1 9.4 9.0`** |
 | Words per name | `2.97` | `1.26` | `1.20` |
-| Anchor noise | | `20%` | `19%` |
 ```
 
 - One row per judged measure in setup order, then one per command measure.
 - One column per round.
-- A judged cell is inline code holding each judge's score in panel order, with `-` for `no score`. It is bold when every judge gives the top score.
-- An anchor named in the bar gets its own rows, under its name.
-- When there are anchors, the last row is anchor noise, the share of anchor scores that moved since the previous round.
+- A judged cell is inline code holding each judge's score in panel order, with `-` for `no score`. A judge that sat the round out is left out of the cell. It is bold when it meets the bar.
 
-Under the table, list every judge score that moved since the previous round, with its label and the finding behind it.
-
-Done when every judge has answered and the table and the list are shown.
+Done when every judge has answered and the table is shown.
 
 ## 3. Step
 
-Stop when the bar holds, when three rounds in a row raise no score, or when the budget ends. A budget end is reported as bar not reached.
+Stop when the bar holds, when three rounds in a row raise no measure's panel mean above its best earlier round, or when the budget ends. A budget end is reported as bar not reached.
 
-Otherwise weigh every finding yourself. Apply the ones you agree with, add the rest to the declined list with a reason, and measure again.
+Stop and ask the user for a ruling when the climb circles, meaning a round undoes an earlier round's change or brings back a finding an earlier round fixed. Show the findings that pull against each other.
+
+Otherwise weigh every finding yourself. A finding about something this round changed is a regression, so fix it or undo the change. Judges find something new every round, so the scope holds only because you hold it. Apply a finding when its fix stays inside the scope and what may change, using the smallest fix that answers it. Add the rest to the declined list with a reason, as out of scope even when the judge is right. Show what you apply and what you decline, with the reason for each, then measure again.
 
 ## 4. Present
 
-Show the final table, a table of every anchor's scores from the last round, what changed, what you declined, and whether the bar was reached.
+Show the final table, what changed, what you declined, and whether the bar was reached.
