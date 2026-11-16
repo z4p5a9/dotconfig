@@ -159,8 +159,12 @@ test "fails with ValidationError code MISSING_SKU when an item has no sku"
 
 Matching only ValidationError would also pass on a negative price.
 
-## 3. Prove it turns red
+## 3. Make sure it can fail
 
-This step covers each test you wrote or changed. A test you left as it was only needs to run green.
+A test that can't fail proves nothing and catches nothing. When you write or change a test, name the change to the code that would turn it red, and check that the assertion depends on that code.
 
-Break the condition the test guards, by running it before the code exists or by flipping the behavior under test, and run it. It fails, and it fails for the reason the name states. Restore the code and run it again. Done when you have seen both the red run and the green run for every test you wrote or changed.
+Reading the test usually settles it. Run a failure only when reading leaves doubt, such as an assertion that can pass on an empty result, a loop that may run zero times, or a stand-in that returns the value being asserted. Then flip that one condition, see the test fail for the reason its name states, and restore the code.
+
+Don't break tests one by one as a routine step. A test you left as it was only needs to run green.
+
+Done when you can name what would turn each test you wrote or changed red.
