@@ -72,60 +72,26 @@ Every claim you make rests on evidence. Read the code, docs, and history, or run
 
 ## Subagents
 
-Do the work yourself by default. A subagent costs a written brief, a cold start, and a wait, and on most tasks that costs more than it saves. Spawn one in these cases.
+Spawn every subagent with T3's `delegate_task`, whatever harness you run in, because the native subagent tools can't pick the provider and model.
 
-- Two or more independent pieces can run at once, and none of them is your next step. Do the blocking step yourself while the others run.
-- A read is large and you only need its conclusion, such as a sweep across many files or a long log.
-- Work needs a review. The reviewer runs on a different provider than whoever did the work, you or a subagent, so a model with different training looks at it. Review when I ask or when the work is risky enough to need a second look, not after every change.
-- I ask for one.
+Pick the model from this table by what the work demands most. Use only these models, unless a skill or I name another. `orchestrator_capabilities` lists more, newer looking ones included, and you leave those alone. Scores run 1 to 4, and higher is better.
 
-Keep the work yourself when your next step depends on the result, when you could finish the task in about the time it takes to write the brief, or when it is tightly coupled to what you are doing. Once you delegate a task, leave it to the subagent and work on something else.
+| | Fable, `claude-fable-5-2` | Opus, `claude-opus-5-5` | Sol, `gpt-6.1-sol` |
+|---|---|---|---|
+| intelligence, reasoning through a hard problem | 4 | 4 | 4 |
+| knowledge, how much the model knows across fields and how deep | 4 | 3 | 3 |
+| taste, making sound judgment calls where no metric decides, again and again | 4 | 4 | 1 |
+| visuals, any visual work, UI and UX included, that is beautiful, works well, and makes sense | 4 | 2 | 1 |
+| craft, elegant work you would be proud of | 4 | 4 | 2 |
+| scrutiny, finding bugs, holes, and false claims | 2 | 2 | 4 |
+| thoroughness, covering every case | 3 | 3 | 4 |
+| speed, wall clock time to a finished task | 1 | 2 | 3 |
+| cost, per finished task rather than per token | 1 | 2 | 3 |
+| reasoning | `high`, `xhigh` for the hard parts | `high`, `xhigh` for the hard parts | `high`, `xhigh` for the hard parts |
 
-### Spawning
+When you spawn reviewers and know which model did the work, at least one reviewer runs on a different provider than that model. Fable and Opus both run on Anthropic, and Sol runs on OpenAI. When you don't know which model did the work, pick reviewers from the table.
 
-This applies in T3 Code. Spawn every subagent with T3's `delegate_task`, because the native subagent tools can't pick the provider and model.
-
-Only the main thread spawns subagents. A subagent does its assigned work itself and never spawns agents, delegates tasks, or launches threads. Put this restriction in every task prompt.
-
-Every subagent runs on one of two models, exactly as named below. `orchestrator_capabilities` lists many more, newer looking ones included. Read it only for option IDs. If neither fits the work, ask me. Pick the model by the work you hand off.
-
-Opus, `claudeAgent` / `claude-opus-5-5`, fits work that needs judgment or ships, such as UI, API design, architecture, and production code that gets merged and deployed.
-
-Sol, `codex` / `gpt-6.1-sol`, fits work that challenges and digs. It reviews, audits, and advises, plays devil's advocate against a direction or plan, and takes an idea one level deeper to surface what we missed. It runs codebase recon and thorough research whose findings go back to Opus to judge. It writes throwaway code that nobody merges or reads, such as a script that tries something out. It drives a computer well, which makes it the model for QA.
-
-When the work fits no role, pick by what it demands most. Scores run 1 to 4, higher is better. The last row is the reasoning to spawn each model with.
-
-| | Opus | Sol |
-|---|---|---|
-| intelligence, reasoning through a hard problem | 4 | 4 |
-| taste, API and product sense | 4 | 1 |
-| ui, good looking usable interfaces | 4 | 1 |
-| craft, correct clean code | 4 | 2 |
-| scrutiny, finding bugs, holes, and false claims | 2 | 4 |
-| thoroughness, covering every case | 3 | 4 |
-| speed, wall clock time to a finished task | 2 | 3 |
-| cost, per finished task rather than per token | 1 | 3 |
-| reasoning | `high`, `xhigh` for the hard parts | `high`, `xhigh` for the hard parts |
-
-Spawn with these settings.
-
-```ts
-delegate_task({
-  task, // ends with the no-spawn restriction
-  runtimeMode: "full-access",
-  target: {
-    providerInstanceId: "claudeAgent",
-    model: "claude-opus-5-5",
-    options: { effort: "high" },
-  },
-})
-
-// Sol names reasoning differently.
-target: { providerInstanceId: "codex", model: "gpt-6.1-sol", options: { reasoningEffort: "high" } }
-```
-
-- Write each task prompt in the plain terms of software design and testing. Open it with what the code is, that it is ours, and what the work is for. State each check as the property the code must keep, such as "malformed text fails with `MalformedValueError`".
-- Only I change the model. A flagged prompt gets rewritten and retried on the same model. A transient failure gets a wait and a retry. If it still can't run, stop and tell me.
+If a provider flags a prompt, rewrite the prompt and retry on the same model. If a run hits a transient error, wait and retry. Only I change the model. If it still fails, stop and tell me.
 
 ## Reporting subagent work
 
