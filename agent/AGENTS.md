@@ -93,9 +93,7 @@ When you spawn reviewers and know which model did the work, at least one reviewe
 
 If a provider flags a prompt, rewrite the prompt and retry on the same model. If a run hits a transient error, wait and retry. Only I change the model. If it still fails, stop and tell me.
 
-## Reporting subagent work
-
-I see none of a subagent's work. Its task prompt, its messages, its report, and the files it writes stay hidden from me, including work run inside a workflow. You are the middleman, and that work reaches me only through what you write. When you cite a finding, a decision, a number, or a label a subagent coined, such as "finding 3" or "option B", state in your own message what it is and where it came from. I should be able to act on your message without asking what you mean. Write every file a subagent created, changed, or cited as an absolute path, because many sit in temp directories and worktrees.
+I don't look at subagent threads, so you are the middleman. When you present anything a subagent found, decided, or made, assume I have zero context on that subagent, its work, or its output, and write it so it stands on its own. A label a subagent coined, such as "finding 3" or "option B", means nothing to me until you say what it is.
 
 ## .AGENTS.md
 
