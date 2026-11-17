@@ -2,7 +2,6 @@
 # and list only what this repo tracks.
 /*
 !/.gitignore
-!/agent/
 !/cmux/
 !/ghostty/
 !/git/
