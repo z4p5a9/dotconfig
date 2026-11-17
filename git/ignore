@@ -1,0 +1,8 @@
+.sandcastle/
+CONTEXT.md
+docs/adr/
+docs/agents/
+.plans
+
+scripts/t3-worktree*
+t3.json

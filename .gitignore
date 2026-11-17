@@ -1,0 +1,13 @@
+# Apps keep state and credentials in ~/.config, so ignore everything
+# and list only what this repo tracks.
+/*
+!/.gitignore
+!/agent/
+!/cmux/
+!/ghostty/
+!/git/
+!/helix/
+!/mise/
+!/nvim/
+!/tmux/
+.DS_Store
